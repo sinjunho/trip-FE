@@ -1,116 +1,154 @@
-// src/router/index.js
-import { createRouter, createWebHistory } from "vue-router";
-import { useAuthStore } from "@/stores/auth";
-import HomeView from "@/views/HomeView.vue";
-import LoginView from "@/views/LoginView.vue";
-import RegisterView from "@/views/RegisterView.vue";
-// 기타 뷰 컴포넌트 import...
+// src/stores/member.js
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
+import apiClient from "@/api";
 
-const routes = [
-  {
-    path: "/",
-    name: "home",
-    component: HomeView,
-    meta: { title: "홈" },
-  },
-  {
-    path: "/login",
-    name: "login",
-    component: LoginView,
-    meta: { title: "로그인", guest: true },
-  },
-  {
-    path: "/register",
-    name: "register",
-    component: RegisterView,
-    meta: { title: "회원가입", guest: true },
-  },
-  {
-    path: "/mypage",
-    name: "mypage",
-    component: () => import("@/views/MyPageView.vue"),
-    meta: { title: "마이페이지", requiresAuth: true },
-  },
-  {
-    path: "/attractions",
-    name: "attractions",
-    component: () => import("@/views/AttractionView.vue"),
-    meta: { title: "관광지 검색" },
-  },
-  {
-    path: "/attractions/:id",
-    name: "attraction-detail",
-    component: () => import("@/views/AttractionDetailView.vue"),
-    meta: { title: "관광지 상세" },
-  },
-  {
-    path: "/board",
-    name: "board-list",
-    component: () => import("@/views/BoardListView.vue"),
-    meta: { title: "게시판" },
-  },
-  {
-    path: "/board/write",
-    name: "board-write",
-    component: () => import("@/views/BoardWriteView.vue"),
-    meta: { title: "게시글 작성", requiresAuth: true },
-  },
-  {
-    path: "/board/:id",
-    name: "board-detail",
-    component: () => import("@/views/BoardDetailView.vue"),
-    meta: { title: "게시글 상세" },
-  },
-  {
-    path: "/admin/members",
-    name: "admin-members",
-    component: () => import("@/views/admin/MemberListView.vue"),
-    meta: { title: "회원 관리", requiresAuth: true, requiresAdmin: true },
-  },
-  {
-    path: "/:pathMatch(.*)*",
-    name: "not-found",
-    component: () => import("@/views/NotFoundView.vue"),
-    meta: { title: "페이지를 찾을 수 없습니다" },
-  },
-];
+export const useMemberStore = defineStore("member", () => {
+  // state
+  const user = ref(null);
+  const token = ref(localStorage.getItem("auth-token") || null);
+  const loading = ref(false);
+  const error = ref(null);
 
-const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
-  routes,
+  // getters
+  const isLoggedIn = computed(() => !!token.value && !!user.value);
+  const isAdmin = computed(() => user.value && user.value.role === "admin");
+  const getUser = computed(() => user.value);
+
+  // actions
+  // 사용자 정보 로드
+  async function loadUser() {
+    if (!token.value) return;
+
+    try {
+      loading.value = true;
+      // 토큰이 있으면 현재 사용자 정보 조회
+      const response = await apiClient.get("/members/current");
+      user.value = response.data;
+    } catch (err) {
+      error.value = "사용자 정보를 불러오는데 실패했습니다.";
+      logout();
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  // 로그인
+  async function login(credentials) {
+    try {
+      loading.value = true;
+      error.value = null;
+
+      const response = await apiClient.post("/members/login", credentials);
+
+      // 토큰이 백엔드에서 반환되는 형식에 따라 코드 조정 필요
+      token.value = response.data.token || "";
+      user.value = response.data;
+
+      // 로컬 스토리지에 토큰 저장
+      localStorage.setItem("auth-token", token.value);
+
+      return true;
+    } catch (err) {
+      error.value = err.response?.data?.message || "로그인에 실패했습니다.";
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  // 회원가입
+  async function register(userData) {
+    try {
+      loading.value = true;
+      error.value = null;
+
+      await apiClient.post("/members/register", userData);
+      return true;
+    } catch (err) {
+      error.value = err.response?.data?.message || "회원가입에 실패했습니다.";
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  // 로그아웃
+  async function logout() {
+    try {
+      if (token.value) {
+        // 백엔드에 로그아웃 요청 (선택적)
+        await apiClient.get("/members/logout");
+      }
+    } catch (err) {
+      console.error("로그아웃 처리 중 오류:", err);
+    } finally {
+      // 상태 초기화
+      user.value = null;
+      token.value = null;
+
+      // 로컬 스토리지에서 토큰 제거
+      localStorage.removeItem("auth-token");
+    }
+  }
+
+  // 회원 정보 수정
+  async function updateProfile(userData) {
+    try {
+      loading.value = true;
+      error.value = null;
+
+      const response = await apiClient.put(`/members/${user.value.id}`, userData);
+      user.value = response.data;
+      return true;
+    } catch (err) {
+      error.value = err.response?.data?.message || "프로필 업데이트에 실패했습니다.";
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  // 회원 탈퇴
+  async function deleteMember(password) {
+    try {
+      loading.value = true;
+      error.value = null;
+
+      await apiClient.delete(`/members/${user.value.id}`, {
+        data: { password },
+      });
+
+      // 상태 초기화
+      user.value = null;
+      token.value = null;
+      localStorage.removeItem("auth-token");
+
+      return true;
+    } catch (err) {
+      error.value = err.response?.data?.message || "회원 탈퇴에 실패했습니다.";
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  return {
+    // state
+    user,
+    token,
+    loading,
+    error,
+    // getters
+    isLoggedIn,
+    isAdmin,
+    getUser,
+    // actions
+    loadUser,
+    login,
+    register,
+    logout,
+    updateProfile,
+    deleteMember,
+  };
 });
-
-// 네비게이션 가드 설정
-router.beforeEach(async (to, from, next) => {
-  // 페이지 제목 설정
-  document.title = `${to.meta.title} | Enjoy Trip` || "Enjoy Trip";
-
-  const authStore = useAuthStore();
-
-  // 사용자 정보가 없지만 토큰이 있는 경우 사용자 정보 로드
-  if (!authStore.user && authStore.token) {
-    await authStore.loadUser();
-  }
-
-  // 인증이 필요한 페이지에 접근했을 때
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    // 로그인 페이지로 리다이렉트
-    return next({ name: "login", query: { redirect: to.fullPath } });
-  }
-
-  // 관리자 권한이 필요한 페이지에 접근했을 때
-  if (to.meta.requiresAdmin && !authStore.isAdmin) {
-    // 권한 없음 메시지와 함께 홈으로 리다이렉트
-    alert("관리자 권한이 필요합니다.");
-    return next({ name: "home" });
-  }
-
-  // 이미 로그인된 사용자가 로그인/회원가입 페이지에 접근했을 때
-  if (to.meta.guest && authStore.isAuthenticated) {
-    return next({ name: "home" });
-  }
-
-  next();
-});
-
-export default router;

@@ -4,16 +4,6 @@ import { ref, computed } from "vue";
 import router from "@/router";
 import apiClient from "@/api";
 
-// 백엔드 API에 맞게 수정해주세요
-const api = {
-  login: (credentials) => apiClient.post("/members/login", credentials),
-  getCurrentUser: () => apiClient.get("/members/current"),
-  logout: () => apiClient.get("/members/logout"),
-  updateMember: (id, data) => apiClient.put(`/members/${id}`, data),
-  deleteMember: (id, data) => apiClient.delete(`/members/${id}`, { data }),
-  register: (userData) => apiClient.post("/members/register", userData),
-};
-
 export const useAuthStore = defineStore("auth", () => {
   // state
   const user = ref(null);
@@ -34,7 +24,7 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       loading.value = true;
       // 토큰이 있으면 현재 사용자 정보 조회
-      const response = await api.getCurrentUser();
+      const response = await apiClient.get("/members/current");
       user.value = response.data;
     } catch (err) {
       error.value = "사용자 정보를 불러오는데 실패했습니다.";
@@ -50,7 +40,7 @@ export const useAuthStore = defineStore("auth", () => {
       loading.value = true;
       error.value = null;
 
-      const response = await api.login(credentials);
+      const response = await apiClient.post("/members/login", credentials);
 
       // 토큰이 백엔드에서 반환되는 형식에 따라 코드 조정 필요
       token.value = response.data.token || "";
@@ -59,8 +49,6 @@ export const useAuthStore = defineStore("auth", () => {
       // 로컬 스토리지에 토큰 저장
       localStorage.setItem("auth-token", token.value);
 
-      // 로그인 성공 후 홈 페이지로 이동
-      router.push("/");
       return true;
     } catch (err) {
       error.value = err.response?.data?.message || "로그인에 실패했습니다.";
@@ -76,10 +64,7 @@ export const useAuthStore = defineStore("auth", () => {
       loading.value = true;
       error.value = null;
 
-      await api.register(userData);
-
-      // 회원가입 후 로그인 페이지로 이동
-      router.push("/login");
+      await apiClient.post("/members/register", userData);
       return true;
     } catch (err) {
       error.value = err.response?.data?.message || "회원가입에 실패했습니다.";
@@ -94,7 +79,7 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       if (token.value) {
         // 백엔드에 로그아웃 요청 (선택적)
-        await api.logout();
+        await apiClient.get("/members/logout");
       }
     } catch (err) {
       console.error("로그아웃 처리 중 오류:", err);
@@ -105,9 +90,6 @@ export const useAuthStore = defineStore("auth", () => {
 
       // 로컬 스토리지에서 토큰 제거
       localStorage.removeItem("auth-token");
-
-      // 로그인 페이지로 이동
-      router.push("/login");
     }
   }
 
@@ -117,7 +99,7 @@ export const useAuthStore = defineStore("auth", () => {
       loading.value = true;
       error.value = null;
 
-      const response = await api.updateMember(user.value.id, userData);
+      const response = await apiClient.put(`/members/${user.value.id}`, userData);
       user.value = response.data;
       return true;
     } catch (err) {
@@ -134,15 +116,15 @@ export const useAuthStore = defineStore("auth", () => {
       loading.value = true;
       error.value = null;
 
-      await api.deleteMember(user.value.id, { password });
+      await apiClient.delete(`/members/${user.value.id}`, {
+        data: { password },
+      });
 
       // 상태 초기화
       user.value = null;
       token.value = null;
       localStorage.removeItem("auth-token");
 
-      // 홈 페이지로 이동
-      router.push("/");
       return true;
     } catch (err) {
       error.value = err.response?.data?.message || "회원 탈퇴에 실패했습니다.";

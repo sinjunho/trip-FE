@@ -92,10 +92,14 @@ const topAttractions = computed(() => attractionStore.topAttractions);
 
 // 인기 관광지 및 데이터 로드
 onMounted(async () => {
-  await attractionStore.fetchTopAttractions();
-  await attractionStore.fetchRandomAttractions();
+  try {
+    await attractionStore.fetchTopAttractions();
+    await attractionStore.fetchRandomAttractions();
+  } catch (error) {
+    console.error("데이터 로딩 중 오류 발생:", error);
+  }
 });
-const topAttractions = ref([]);
+
 const featuredPlaces = ref([
   { id: 1, title: "해변", image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e" },
   { id: 2, title: "서울", image: "https://images.unsplash.com/photo-1534274867514-d5b47ef89ed7" },
@@ -157,16 +161,6 @@ const userReviews = ref([
     profileImage: "/img/profile/user3.jpg",
   },
 ]);
-
-// 인기 관광지 가져오기
-onMounted(async () => {
-  try {
-    const response = await apiClient.get("/attractions/rank");
-    topAttractions.value = response.data.slice(0, 10); // 상위 10개만
-  } catch (error) {
-    console.error("인기 관광지 데이터 로딩 실패:", error);
-  }
-});
 </script>
 
 <style scoped>

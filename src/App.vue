@@ -18,8 +18,8 @@
 import { onMounted, computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import AppHeader from "@/components/layout/AppHeader.vue";
-import AppFooter from "@/components/layout/AppFooter.vue";
-import AppLoader from "@/components/common/AppLoader.vue";
+// import AppFooter from "@/components/layout/AppFooter.vue";
+// import AppLoader from "@/components/common/AppLoader.vue";
 
 const authStore = useAuthStore();
 const loading = computed(() => authStore.loading);
