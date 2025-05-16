@@ -132,10 +132,10 @@ const userReviews = ref([
   {
     id: 2,
     content: "부산 여행 코스 추천 덕분에 시간을 효율적으로 사용할 수 있었습니다. 다음에도 꼭 이용할게요!",
-    name: "김아윤",
+    name: "신규원",
     trip: "부산 여행",
     stars: 4,
-    profileImage: "https://ui-avatars.com/api/?name=김아윤&background=random",
+    profileImage: "https://ui-avatars.com/api/?name=신규원&background=random",
   },
   {
     id: 3,
@@ -158,7 +158,7 @@ const userReviews = ref([
   background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)),
     url("https://images.unsplash.com/photo-1517154421773-0529f29ea451") no-repeat center center/cover;
   background-attachment: fixed;
-  height: 650px;
+  height: 850px;
   display: flex;
   align-items: center;
   justify-content: center;
