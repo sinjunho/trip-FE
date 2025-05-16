@@ -53,13 +53,12 @@
       </div>
 
       <!-- 지도 영역 (선택적) -->
-      <div v-if="showMap" class="mb-4">
+      <div id="map" style="width: 100%; height: 350px" ref="map"></div>
+      <!-- <div v-if="showMap" class="mb-4">
         <div class="card">
-          <div class="card-body p-0">
-            <div id="map" class="attraction-map"></div>
-          </div>
+          <div class="card-body p-0"></div>
         </div>
-      </div>
+      </div> -->
 
       <!-- 결과 필터 및 토글 -->
       <div class="d-flex justify-content-between align-items-center mb-3">
@@ -136,7 +135,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, useTemplateRef } from "vue";
 import attractionAPI from "@/api/attraction";
 
 // 상태 관리
@@ -158,6 +157,19 @@ const searchParams = ref({
   contentTypeName: "",
   areaCode: "",
   siGunGuCode: "",
+});
+
+// 지도
+const mapContainer = useTemplateRef("map");
+
+const mapOption = {
+  center: new window.kakao.maps.LatLng(33.450701, 126.570667), // 지도의 중심좌표
+  level: 3, // 지도의 확대 레벨
+};
+
+onMounted(() => {
+  // 지도를 표시할 div와  지도 옵션으로  지도를 생성합니다
+  const map = new window.kakao.maps.Map(mapContainer.value, mapOption);
 });
 
 // 계산된 속성
