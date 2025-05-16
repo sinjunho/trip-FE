@@ -1,12 +1,6 @@
 // src/router/index.js
 import { createRouter, createWebHistory } from "vue-router";
-import HomeView from "@/views/HomeView.vue";
-import LoginView from "@/views/LoginView.vue";
-import RegisterView from "@/views/RegisterView.vue";
-import AttractionListView from "@/components/AttractionList.vue";
-import PasswordResetView from "@/views/PasswordResetView.vue"; //
-import { useAuthStore } from "@/stores/auth";
-import MypageView from "@/views/MypageView.vue"; //
+import HomeView from "../views/HomeView.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -19,53 +13,76 @@ const router = createRouter({
     {
       path: "/login",
       name: "login",
-      component: LoginView,
+      component: () => import("../views/LoginView.vue"),
     },
     {
       path: "/register",
       name: "register",
-      component: RegisterView,
+      component: () => import("../views/RegisterView.vue"),
     },
-    {
-      path: "/attractions",
-      name: "attractions",
-      component: AttractionListView,
-    },
-    {
-      path: "/password-reset",
-      name: "password-reset",
-      component: PasswordResetView,
-    },
-    //마이페이지
     {
       path: "/mypage",
       name: "mypage",
-      component: MypageView,
-      meta: { requiresAuth: true }, // 인증이 필요한 페이지
+      component: () => import("../views/MyPageView.vue"),
+      meta: { requiresAuth: true },
+    },
+    // 관광지 관련 라우트
+    {
+      path: "/attractions",
+      name: "attractions",
+      component: () => import("../views/AttractionListView.vue"),
+    },
+    {
+      path: "/attractions/:id",
+      name: "attraction-detail",
+      component: () => import("../views/AttractionDetailView.vue"),
+    },
+    // 게시판 관련 라우트
+    {
+      path: "/board",
+      name: "board-list",
+      component: () => import("../views/BoardListView.vue"),
+    },
+    {
+      path: "/board/:bno",
+      name: "board-detail",
+      component: () => import("../views/BoardDetailView.vue"),
+    },
+    {
+      path: "/board/write",
+      name: "board-write",
+      component: () => import("../views/BoardWriteView.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/board/edit/:bno",
+      name: "board-edit",
+      component: () => import("../views/BoardWriteView.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/:pathMatch(.*)*",
+      name: "not-found",
+      component: () => import("../views/NotFoundView.vue"),
     },
   ],
+  scrollBehavior() {
+    // 페이지 전환 시 맨 위로 스크롤
+    return { top: 0 };
+  },
 });
 
-// 라우터 가드
+// 네비게이션 가드 설정
 router.beforeEach((to, from, next) => {
-  const authStore = useAuthStore();
+  const isLoggedIn = localStorage.getItem("auth-token") !== null;
 
-  // 접근 제한 페이지 설정
-  const authRequired = to.matched.some((record) => record.meta.requiresAuth);
-  const adminRequired = to.matched.some((record) => record.meta.requiresAdmin);
-
-  if (authRequired && !authStore.isAuthenticated) {
-    // 인증이 필요한 페이지인데 로그인되지 않은 경우
-    next({
-      path: "/login",
-      query: { redirect: to.fullPath },
-    });
-  } else if (adminRequired && !authStore.isAdmin) {
-    // 관리자 권한이 필요한 페이지인데 관리자가 아닌 경우
-    next({ path: "/" });
-  } else {
-    next();
+  // 인증이 필요한 페이지 처리
+  if (to.meta.requiresAuth && !isLoggedIn) {
+    next({ name: "login", query: { redirect: to.fullPath } });
+    return;
   }
+
+  next();
 });
 
 export default router;

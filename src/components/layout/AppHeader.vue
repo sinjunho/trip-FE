@@ -11,7 +11,7 @@
           <li>
             <router-link :to="{ name: 'attractions' }">관광지 검색</router-link>
           </li>
-          <!-- <li><router-link :to="{ name: 'board-list' }">여행 커뮤니티</router-link> </li> -->
+          <li><router-link :to="{ name: 'board-list' }">여행 커뮤니티</router-link></li>
 
           <!-- 로그인하지 않은 경우 -->
           <template v-if="!isLoggedIn">
@@ -38,7 +38,7 @@
 
               <div v-show="showUserMenu" class="user-dropdown">
                 <router-link :to="{ name: 'mypage' }"><i class="fas fa-user"></i> 마이페이지</router-link>
-                <!-- <router-link :to="{ name: 'board-write' }"><i class="fas fa-pen"></i> 글 작성하기</router-link> -->
+                <router-link :to="{ name: 'board-write' }"><i class="fas fa-pen"></i> 글 작성하기</router-link>
                 <button @click="handleLogout"><i class="fas fa-sign-out-alt"></i> 로그아웃</button>
               </div>
             </li>
