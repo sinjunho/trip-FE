@@ -1,88 +1,107 @@
 // src/stores/auth.js
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
+import apiClient from "@/api";
 
 export const useAuthStore = defineStore("auth", () => {
-  const user = ref(null);
-  const token = ref(localStorage.getItem("token"));
+  // 로컬 스토리지에서 기존 토큰과 사용자 정보 가져오기
+  const token = ref(localStorage.getItem("auth-token") || null);
+  const user = ref(JSON.parse(localStorage.getItem("auth-user")) || null);
   const loading = ref(false);
   const error = ref(null);
 
-  const isLoggedIn = computed(() => !!token.value);
+  // Computed properties
+  const isAuthenticated = computed(() => !!token.value && !!user.value);
+  const isAdmin = computed(() => user.value && user.value.role === "admin");
 
-  const login = async (credentials) => {
-    loading.value = true;
-    error.value = null;
+  // 사용자 정보 로드
+  async function loadUser() {
+    if (!token.value) return;
 
     try {
-      // TODO: 실제 API 호출로 대체
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(credentials),
-      });
+      loading.value = true;
+      const response = await apiClient.get("/members/current");
+      user.value = response.data;
+      // 로컬 스토리지에 사용자 정보 저장
+      localStorage.setItem("auth-user", JSON.stringify(user.value));
+    } catch (err) {
+      console.error("사용자 정보 로드 실패:", err);
+      logout();
+    } finally {
+      loading.value = false;
+    }
+  }
 
-      if (!response.ok) {
-        throw new Error("로그인에 실패했습니다.");
-      }
+  // 로그인
+  async function login(credentials) {
+    try {
+      loading.value = true;
+      error.value = null;
 
-      const data = await response.json();
-      token.value = data.token;
-      user.value = data.user;
-      localStorage.setItem("token", data.token);
+      const response = await apiClient.post("/members/login", credentials);
+
+      token.value = response.data.token;
+      user.value = response.data.user || response.data;
+
+      // 로컬 스토리지에 인증 정보 저장
+      localStorage.setItem("auth-token", token.value);
+      localStorage.setItem("auth-user", JSON.stringify(user.value));
 
       return true;
     } catch (err) {
-      error.value = err.message;
+      error.value = err.response?.data?.message || "로그인에 실패했습니다.";
       return false;
     } finally {
       loading.value = false;
     }
-  };
+  }
 
-  const register = async (userData) => {
-    loading.value = true;
-    error.value = null;
-
+  // 로그아웃
+  async function logout() {
     try {
-      // TODO: 실제 API 호출로 대체
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(userData),
-      });
-
-      if (!response.ok) {
-        throw new Error("회원가입에 실패했습니다.");
+      if (token.value) {
+        await apiClient.get("/members/logout");
       }
+    } catch (err) {
+      console.error("로그아웃 오류:", err);
+    } finally {
+      // 상태와 로컬 스토리지 초기화
+      token.value = null;
+      user.value = null;
+      localStorage.removeItem("auth-token");
+      localStorage.removeItem("auth-user");
+    }
+  }
 
+  // 회원가입
+  async function register(userData) {
+    try {
+      loading.value = true;
+      error.value = null;
+
+      await apiClient.post("/members/register", userData);
       return true;
     } catch (err) {
-      error.value = err.message;
+      error.value = err.response?.data?.message || "회원가입에 실패했습니다.";
       return false;
     } finally {
       loading.value = false;
     }
-  };
-
-  const logout = () => {
-    user.value = null;
-    token.value = null;
-    localStorage.removeItem("token");
-  };
+  }
 
   return {
+    // state
     user,
     token,
     loading,
     error,
-    isLoggedIn,
+    // getters
+    isAuthenticated,
+    isAdmin,
+    // actions
+    loadUser,
     login,
-    register,
     logout,
+    register,
   };
 });
