@@ -42,3 +42,6 @@ export default {
     return apiClient.get(`/attractions/gugun/${code}`);
   },
 };
+export const getTopAttractions = () => {
+  return apiClient.get("/attractions/rank");
+};
