@@ -64,8 +64,12 @@ const authStore = useAuthStore();
 const board = ref({});
 const loading = ref(true);
 
-// 계산된 속성
+// 콘솔 로그를 추가하여 권한 확인
 const isAuthor = computed(() => {
+  console.log("인증 상태:", authStore.isAuthenticated);
+  console.log("현재 사용자:", authStore.user);
+  console.log("게시글 작성자:", board.value?.writer);
+
   return (
     authStore.isAuthenticated &&
     board.value &&
@@ -105,12 +109,25 @@ const deleteBoard = async () => {
   try {
     loading.value = true;
     const bno = board.value.bno;
-    await boardAPI.deleteBoard(bno);
+    console.log(`게시글 삭제 요청 - 번호: ${bno}`);
+
+    // API 호출 전 토큰 확인
+    const token = localStorage.getItem("auth-token");
+    console.log("인증 토큰 유무:", !!token);
+
+    const response = await boardAPI.deleteBoard(bno);
+    console.log("삭제 API 응답:", response);
+
     alert("게시글이 삭제되었습니다.");
     router.push("/board");
   } catch (error) {
     console.error("게시글 삭제 중 오류 발생:", error);
-    alert("게시글 삭제에 실패했습니다.");
+    // 오류 응답 상세 정보 표시
+    if (error.response) {
+      console.error("에러 상태:", error.response.status);
+      console.error("에러 데이터:", error.response.data);
+    }
+    alert("게시글 삭제에 실패했습니다. " + (error.response?.data?.message || error.message));
   } finally {
     loading.value = false;
   }

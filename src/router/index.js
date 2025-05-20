@@ -65,6 +65,35 @@ const router = createRouter({
       name: "not-found",
       component: () => import("../views/NotFoundView.vue"),
     },
+    {
+      path: "/plans",
+      name: "plans",
+      component: () => import("../views/PlanListView.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/plans/create",
+      name: "plan-create",
+      component: () => import("@/views/PlanCreateView.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/plans/:id",
+      name: "plan-detail",
+      component: () => import("@/views/PlanDetailView.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/plans/:id/edit",
+      name: "plan-edit",
+      component: () => import("@/views/PlanEditView.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/plans/share/:id",
+      name: "plan-share",
+      component: () => import("@/views/PlanShareView.vue"),
+    },
   ],
   scrollBehavior() {
     // 페이지 전환 시 맨 위로 스크롤

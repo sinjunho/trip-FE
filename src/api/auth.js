@@ -20,3 +20,24 @@ export default {
     return apiClient.get("/members/current");
   },
 };
+
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("auth-token");
+    console.log(`API 요청: ${config.method.toUpperCase()} ${config.url}`);
+    console.log("요청 헤더:", config.headers);
+
+    if (token) {
+      console.log("인증 토큰이 요청에 포함됨:", token.substring(0, 20) + "...");
+      config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      console.log("인증 토큰 없음 - 권한이 필요한 작업은 실패할 수 있음");
+    }
+
+    return config;
+  },
+  (error) => {
+    console.error("API 요청 인터셉터 에러:", error);
+    return Promise.reject(error);
+  }
+);
