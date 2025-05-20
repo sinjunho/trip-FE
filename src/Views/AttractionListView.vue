@@ -79,9 +79,9 @@
                 v-for="attraction in attractions"
                 :key="attraction.no"
                 class="attraction-item"
-                :class="{ active: selectedAttraction === attraction.no }"
-                @click="selectAttraction(attraction)"
+                @click="goToAttractionDetail(attraction.no)"
               >
+                >
                 <div class="attraction-item-img">
                   <img :src="attraction.firstImage1 || '/img/no-image.jpg'" :alt="attraction.title" />
                 </div>
@@ -259,6 +259,10 @@ const nearbyAttractions = ref([]);
 let map = null;
 let markers = [];
 let infowindow = null;
+
+const goToAttractionDetail = (attractionId) => {
+  router.push(`/attractions/${attractionId}`);
+};
 
 // 계산된 속성
 const totalPages = computed(() => {

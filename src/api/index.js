@@ -23,17 +23,16 @@ apiClient.interceptors.request.use(
 );
 
 // 응답 인터셉터 - 인증 오류 처리
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      // 인증 오류 시 로그아웃 처리
-      const authStore = useAuthStore();
-      authStore.logout();
-      window.location.href = "/login";
+// api/index.js
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("auth-token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    return Promise.reject(error);
-  }
+    return config;
+  },
+  (error) => Promise.reject(error)
 );
 
 export default apiClient;

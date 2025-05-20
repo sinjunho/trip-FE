@@ -107,7 +107,61 @@
             </div>
           </div>
         </div>
+        <div class="mt-3">
+          <button v-if="authStore.isAuthenticated" class="btn btn-primary" @click="addToPlan">
+            <i class="fas fa-plus"></i> 여행 계획에 추가
+          </button>
+          <router-link v-else to="/login" class="btn btn-outline-primary">
+            <i class="fas fa-sign-in-alt"></i> 로그인하여 여행 계획에 추가
+          </router-link>
+        </div>
 
+        <!-- 여행 계획 선택 모달 -->
+        <div class="modal fade" id="planSelectModal" tabindex="-1">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">여행 계획 선택</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div v-if="loading" class="text-center">
+                  <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">로딩중...</span>
+                  </div>
+                </div>
+                <div v-else-if="userPlans.length === 0" class="text-center">
+                  <p class="mb-3">등록된 여행 계획이 없습니다.</p>
+                  <router-link to="/plans/create" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> 새 여행 계획 만들기
+                  </router-link>
+                </div>
+                <div v-else>
+                  <div class="list-group">
+                    <button
+                      v-for="plan in userPlans"
+                      :key="plan.planId"
+                      class="list-group-item list-group-item-action"
+                      @click="selectPlan(plan)"
+                    >
+                      <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">{{ plan.title }}</h5>
+                        <small>{{ formatDate(plan.startDate) }} ~ {{ formatDate(plan.endDate) }}</small>
+                      </div>
+                      <p class="mb-1">{{ plan.description }}</p>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <router-link to="/plans/create" class="btn btn-success">
+                  <i class="fas fa-plus"></i> 새 여행 계획 만들기
+                </router-link>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+              </div>
+            </div>
+          </div>
+        </div>
         <!-- 돌아가기 버튼 -->
         <div class="mt-4">
           <router-link to="/attractions" class="btn btn-secondary">
@@ -118,17 +172,37 @@
     </div>
   </div>
 </template>
-
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
-import { useRoute } from "vue-router";
+// 1. 먼저 모든 import 문을 상단에 위치시킵니다
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
+import planAPI from "@/api/plan";
 import attractionAPI from "@/api/attraction";
 
+// 2. 그 다음에 store와 router 등의 초기화를 합니다
 const route = useRoute();
+const router = useRouter();
+const authStore = useAuthStore(); // authStore 초기화를 맨 위로 이동
 const loading = ref(true);
 const attraction = ref(null);
 const nearbyAttractions = ref([]);
+const userPlans = ref([]);
+const loadingPlans = ref(false);
 let mapInstance = null;
+
+// 3. 이제 모든 함수와 로직이 이어집니다
+// formatDate 함수 추가
+const formatDate = (dateStr) => {
+  if (!dateStr) return "";
+
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+};
 
 // 관광지 상세 정보 가져오기
 const fetchAttractionDetail = async () => {
@@ -165,6 +239,21 @@ const fetchNearbyAttractions = async (attractionId) => {
   } catch (error) {
     console.error("주변 관광지 정보를 가져오는 중 오류 발생:", error);
     nearbyAttractions.value = [];
+  }
+};
+
+// 사용자의 여행 계획 목록 가져오기
+const fetchUserPlans = async () => {
+  if (!authStore.isAuthenticated) return;
+
+  try {
+    loadingPlans.value = true;
+    const response = await planAPI.getUserPlans();
+    userPlans.value = response.data;
+  } catch (error) {
+    console.error("여행 계획 목록 조회 중 오류 발생:", error);
+  } finally {
+    loadingPlans.value = false;
   }
 };
 
@@ -206,6 +295,51 @@ const initMap = () => {
   }
 };
 
+// 계획 선택 시 관광지 추가
+const selectPlan = async (plan) => {
+  try {
+    // 선택한 계획의 첫 번째 날에 관광지 추가
+    const newDetail = {
+      dayNumber: 1,
+      title: attraction.value.title,
+      description: "",
+      visitTime: "",
+      stayDuration: 60,
+      orderNo: 1,
+      attractionId: attraction.value.no,
+    };
+
+    // 기존 계획에 일정 추가
+    const updatedPlan = { ...plan };
+    updatedPlan.details = [...plan.details, newDetail];
+
+    await planAPI.updatePlan(plan.planId, updatedPlan);
+
+    // 모달 닫기
+    const modal = bootstrap.Modal.getInstance(document.getElementById("planSelectModal"));
+    modal.hide();
+
+    // 성공 메시지
+    alert(`'${attraction.value.title}'이(가) '${plan.title}' 계획에 추가되었습니다.`);
+
+    // 선택적으로 해당 여행 계획 페이지로 이동
+    if (confirm("해당 여행 계획 페이지로 이동하시겠습니까?")) {
+      router.push(`/plans/${plan.planId}`);
+    }
+  } catch (error) {
+    console.error("여행 계획에 관광지 추가 중 오류 발생:", error);
+    alert("여행 계획에 관광지를 추가하는 중 오류가 발생했습니다.");
+  }
+};
+
+// 관광지 상세 페이지에 관광지를 계획에 추가하는 버튼 클릭 이벤트
+const addToPlan = () => {
+  // 사용자의 여행 계획 목록을 가져오거나, 새 계획 생성 모달을 표시
+  fetchUserPlans(); // 최신 여행 계획 목록 로드
+  const modal = new bootstrap.Modal(document.getElementById("planSelectModal"));
+  modal.show();
+};
+
 // 컴포넌트 마운트 시 실행
 onMounted(() => {
   // 카카오맵 API 로드
@@ -220,6 +354,11 @@ onMounted(() => {
     document.head.appendChild(script);
   } else {
     fetchAttractionDetail();
+  }
+
+  // 인증된 사용자인 경우 여행 계획 로드
+  if (authStore.isAuthenticated) {
+    fetchUserPlans();
   }
 });
 

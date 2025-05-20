@@ -13,7 +13,7 @@
       <!-- 계획 목록이 없을 경우 -->
       <div v-else-if="!plans || plans.length === 0" class="text-center py-5">
         <p class="text-muted">등록된 여행 계획이 없습니다.</p>
-        <router-link to="/plan/create" class="btn btn-primary mt-3">
+        <router-link to="/plans/create" class="btn btn-primary mt-3">
           <i class="fas fa-plus"></i> 새 여행 계획 만들기
         </router-link>
       </div>

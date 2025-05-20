@@ -40,7 +40,7 @@ export const useAuthStore = defineStore("auth", () => {
   };
 
   // 로그인
-  const login = async (credentials) => {
+  async function login(credentials) {
     try {
       loading.value = true;
       error.value = null;
@@ -66,7 +66,7 @@ export const useAuthStore = defineStore("auth", () => {
     } finally {
       loading.value = false;
     }
-  };
+  }
 
   // 로그아웃
   const logout = async () => {

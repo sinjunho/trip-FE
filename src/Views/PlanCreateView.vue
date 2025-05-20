@@ -55,7 +55,21 @@
                 />
               </div>
             </div>
-
+            <!-- 관광지 검색 모달 -->
+            <div class="modal fade" id="attractionSearchModal" tabindex="-1">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">관광지 검색</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <!-- 관광지 검색 컴포넌트 활용 -->
+                    <AttractionMap :isPlanMode="true" @select-attraction="addAttractionToDetail" />
+                  </div>
+                </div>
+              </div>
+            </div>
             <!-- 일차별 계획 -->
             <div v-if="dayCount > 0" class="mt-4">
               <h3>일차별 계획</h3>
@@ -140,8 +154,20 @@
     </div>
 
     <!-- 관광지 검색 모달 -->
-    <div class="modal fade" id="attractionModal" tabindex="-1">
-      <!-- 모달 내용 -->
+    <!-- 관광지 검색 모달 -->
+    <div class="modal fade" id="attractionSearchModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">관광지 검색</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <!-- 관광지 검색 컴포넌트 활용 -->
+            <AttractionMap :isPlanMode="true" @select-attraction="addAttractionToDetail" />
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -151,7 +177,7 @@ import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import planAPI from "@/api/plan";
-import attractionAPI from "@/api/attraction";
+import AttractionMap from "@/views/AttractionListView.vue";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -160,6 +186,26 @@ const authStore = useAuthStore();
 if (!authStore.isAuthenticated) {
   router.push("/login?redirect=/plans/create");
 }
+
+// 관광지 검색 모달 열기
+const openAttractionSearchModal = (detail) => {
+  currentDetail.value = detail;
+  const modal = new bootstrap.Modal(document.getElementById("attractionSearchModal"));
+  modal.show();
+};
+
+// 선택한 관광지를 일정에 추가
+const addAttractionToDetail = (attraction) => {
+  if (!currentDetail.value) return;
+
+  currentDetail.value.title = attraction.title;
+  currentDetail.value.attractionId = attraction.no;
+  currentDetail.value.attraction = attraction;
+
+  // 모달 닫기
+  const modal = bootstrap.Modal.getInstance(document.getElementById("attractionSearchModal"));
+  modal.hide();
+};
 
 // 상태 관리
 const plan = ref({
