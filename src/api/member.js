@@ -9,6 +9,7 @@ export default {
 
   // 회원가입
   register(userData) {
+    console.log("회원가입 요청 데이터:", userData);
     return apiClient.post("/members/register", userData);
   },
 

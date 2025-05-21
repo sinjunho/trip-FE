@@ -25,7 +25,7 @@
 
           <!-- 로그인한 경우 -->
           <template v-else>
-            <!-- 관리자인 경우 -->
+            <!-- 관리자인 경우 (여기에 로그 추가) -->
             <li v-if="isAdmin">
               <router-link :to="{ name: 'admin-members' }">회원 관리</router-link>
             </li>
@@ -39,6 +39,10 @@
               <div v-show="showUserMenu" class="user-dropdown">
                 <router-link :to="{ name: 'mypage' }"><i class="fas fa-user"></i> 마이페이지</router-link>
                 <router-link :to="{ name: 'board-write' }"><i class="fas fa-pen"></i> 글 작성하기</router-link>
+                <!-- 관리자 메뉴 항목 추가 -->
+                <router-link v-if="isAdmin" :to="{ name: 'admin-dashboard' }">
+                  <i class="fas fa-cog"></i> 관리자 대시보드
+                </router-link>
                 <button @click="handleLogout"><i class="fas fa-sign-out-alt"></i> 로그아웃</button>
               </div>
             </li>
@@ -50,7 +54,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 
@@ -60,7 +64,10 @@ const showUserMenu = ref(false);
 
 // 로그인 상태와 사용자 정보를 스토어에서 가져옴
 const isLoggedIn = computed(() => authStore.isAuthenticated);
-const isAdmin = computed(() => authStore.isAdmin);
+const isAdmin = computed(() => {
+  console.log("현재 사용자 역할:", authStore.user?.role);
+  return authStore.isAdmin;
+});
 const userName = computed(() => authStore.user?.name || "사용자");
 
 const toggleUserMenu = () => {
@@ -89,6 +96,19 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener("click", closeUserMenu);
 });
+
+// 디버깅을 위한 watch 추가
+watch(
+  () => authStore.user,
+  (newUser) => {
+    if (newUser) {
+      console.log("사용자 정보 변경:", newUser);
+      console.log("사용자 역할:", newUser.role);
+      console.log("관리자 여부:", isAdmin.value);
+    }
+  },
+  { deep: true }
+);
 </script>
 
 <style scoped>

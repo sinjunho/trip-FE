@@ -38,8 +38,26 @@ export const useAuthStore = defineStore("auth", () => {
       loading.value = false;
     }
   };
+  // 회원가입 함수 추가
+  async function register(userData) {
+    try {
+      loading.value = true;
+      error.value = null;
 
-  // 로그인
+      console.log("회원가입 요청 데이터:", userData);
+      const response = await apiClient.post("/members/register", userData);
+      console.log("회원가입 응답:", response.data);
+
+      return true;
+    } catch (err) {
+      console.error("회원가입 실패:", err);
+      error.value = err.response?.data?.message || "회원가입에 실패했습니다.";
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  }
+  // 로그인 함수 수정
   async function login(credentials) {
     try {
       loading.value = true;
@@ -54,10 +72,14 @@ export const useAuthStore = defineStore("auth", () => {
       token.value = response.data.token || "";
       localStorage.setItem("auth-token", token.value);
 
-      // 사용자 정보 저장
-      user.value = response.data.user || response.data;
+      // 사용자 정보 저장 - 응답 구조에 맞게 수정
+      if (response.data.user) {
+        user.value = response.data.user;
+      } else {
+        user.value = response.data;
+      }
 
-      console.log("로그인 성공 - 사용자:", user.value);
+      console.log("로그인 성공 - 사용자:", user.value, "role:", user.value.role);
       return true;
     } catch (err) {
       console.error("로그인 실패:", err);
@@ -97,6 +119,7 @@ export const useAuthStore = defineStore("auth", () => {
     // Actions
     loadUser,
     login,
+    register,
     logout,
   };
 });

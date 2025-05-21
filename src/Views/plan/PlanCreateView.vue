@@ -177,7 +177,7 @@ import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import planAPI from "@/api/plan";
-import AttractionMap from "@/views/AttractionListView.vue";
+import AttractionMap from "@/views/Attraction/AttractionListView.vue";
 
 const router = useRouter();
 const authStore = useAuthStore();
