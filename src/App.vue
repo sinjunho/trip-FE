@@ -10,6 +10,9 @@
       </router-view>
     </main>
     <app-footer />
+
+    <!-- 챗봇 컴포넌트 추가 -->
+    <chatbot />
   </div>
 </template>
 
@@ -18,6 +21,7 @@ import { onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import AppHeader from "@/components/layout/AppHeader.vue";
 import AppFooter from "@/components/layout/AppFooter.vue";
+import Chatbot from "@/components/common/Chatbot.vue";
 
 const authStore = useAuthStore();
 
