@@ -12,9 +12,10 @@
       <span>검색</span>
     </button>
 
-    <!-- 현재 위치 버튼 -->
+    <!-- 현재 위치 버튼 - 활성 상태 클래스 추가 -->
     <button
       class="current-location-btn"
+      :class="{ active: showRadiusSearch }"
       :style="{ left: showSearchPanel ? '440px' : '20px' }"
       @click="getCurrentLocation"
       :disabled="loadingLocation"
@@ -95,7 +96,7 @@
         </div>
 
         <!-- 4. 시군구 선택 (지역 선택 후 활성화) -->
-        <div class="search-section">
+        <div class="search-section gugun-section" v-if="searchArea" v-show="searchArea">
           <label class="search-label">
             <i class="fas fa-building"></i>
             시군구
@@ -110,23 +111,76 @@
         </div>
 
         <!-- 5. 반경 검색 (현재 위치 기반) -->
-        <div class="search-section" v-if="currentPosition">
+        <div class="search-section" v-if="currentPosition && showRadiusSearch">
           <label class="search-label">
             <i class="fas fa-compass"></i>
             현재 위치 기준 반경 검색
           </label>
-          <div class="radius-search">
-            <select v-model="searchRadius" class="search-select">
-              <option value="">반경 선택</option>
-              <option value="1000">1km 이내</option>
-              <option value="3000">3km 이내</option>
-              <option value="5000">5km 이내</option>
-              <option value="10000">10km 이내</option>
-            </select>
-            <button class="radius-btn" @click="searchByRadius" :disabled="!searchRadius">
-              <i class="fas fa-location-arrow"></i>
-              주변 검색
-            </button>
+          <div class="radius-slider-container">
+            <!-- 슬라이더 컨트롤 -->
+            <div class="slider-wrapper">
+              <div class="slider-labels">
+                <span class="slider-label-min">1km</span>
+                <span class="slider-label-current">{{ formatDistance(searchRadius) }}</span>
+                <span class="slider-label-max">20km</span>
+              </div>
+
+              <input
+                type="range"
+                v-model="searchRadius"
+                class="radius-slider"
+                min="1000"
+                max="20000"
+                step="1000"
+                @input="onSliderChange"
+                @change="searchByRadiusSlider"
+              />
+
+              <!-- 슬라이더 눈금 표시 -->
+              <div class="slider-ticks">
+                <div class="tick" v-for="i in 20" :key="i"></div>
+              </div>
+            </div>
+
+            <!-- 검색 상태 및 컨트롤 -->
+            <div class="slider-controls">
+              <button
+                class="radius-search-btn"
+                @click="searchByRadiusSlider"
+                :disabled="loadingRadius"
+                :class="{ loading: loadingRadius }"
+              >
+                <i v-if="!loadingRadius" class="fas fa-search"></i>
+                <i v-else class="fas fa-spinner fa-spin"></i>
+                <span v-if="!loadingRadius">검색</span>
+                <span v-else>검색중...</span>
+              </button>
+
+              <button
+                class="radius-auto-btn"
+                @click="toggleAutoSearch"
+                :class="{ active: autoSearch }"
+                title="실시간 검색"
+              >
+                <i class="fas fa-sync"></i>
+                <span>자동</span>
+              </button>
+
+              <button class="radius-clear-btn" @click="clearRadiusSearch" title="반경 검색 초기화">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+
+            <!-- 검색 결과 요약 -->
+            <div v-if="radiusSearchResults" class="radius-results-summary">
+              <div class="results-info">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>{{ formatDistance(searchRadius) }} 반경 내 {{ radiusSearchResults.count }}개 발견</span>
+              </div>
+              <div class="results-distance">
+                <small>가장 가까운 곳: {{ radiusSearchResults.nearest }}m</small>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -331,15 +385,20 @@ const searchArea = ref("");
 const searchGugun = ref("");
 const searchContentType = ref("");
 const searchKeyword = ref("");
-const searchRadius = ref("");
+const searchRadius = ref(5000); // 기본값 5km
+const loadingRadius = ref(false);
 const selectedAttraction = ref(null);
 const attractionDetail = ref(null);
 const currentPosition = ref(null);
+const autoSearch = ref(false); // 자동 검색 여부
+const radiusSearchResults = ref(null); // 검색 결과 요약
+let sliderTimeout = null; // 디바운싱용
 
 // 지도 관련 상태
 const mapType = ref("ROADMAP"); // ROADMAP, SKYVIEW, HYBRID
 const showTraffic = ref(false);
 const showRoadview = ref(false);
+const showRadiusSearch = ref(false); // 반경 검색 표시 여부 (토글)
 
 let map = null;
 let markers = [];
@@ -399,12 +458,20 @@ const toggleSearchPanel = () => {
   showSearchPanel.value = !showSearchPanel.value;
 };
 
+// 현재 위치 정보 창 띄우기 (토글)
 const getCurrentLocation = () => {
   if (!navigator.geolocation) {
     alert("위치 서비스를 지원하지 않는 브라우저입니다.");
     return;
   }
 
+  // 이미 위치 정보가 있는 경우 토글만 수행
+  if (currentPosition.value) {
+    showRadiusSearch.value = !showRadiusSearch.value;
+    return;
+  }
+
+  // 위치 정보가 없는 경우에만 위치 가져오기
   loadingLocation.value = true;
   navigator.geolocation.getCurrentPosition(
     (position) => {
@@ -429,6 +496,9 @@ const getCurrentLocation = () => {
           image: markerImage,
         });
       }
+
+      // 위치 정보를 가져온 후 반경 검색 섹션 표시
+      showRadiusSearch.value = true;
       loadingLocation.value = false;
     },
     (error) => {
@@ -437,6 +507,135 @@ const getCurrentLocation = () => {
       loadingLocation.value = false;
     }
   );
+};
+
+// 거리 포맷팅 함수
+const formatDistance = (meters) => {
+  if (!meters) return "5km";
+  const km = meters / 1000;
+  return km % 1 === 0 ? `${km}km` : `${km.toFixed(1)}km`;
+};
+
+// 슬라이더 값 변경 시 (실시간)
+const onSliderChange = () => {
+  if (autoSearch.value) {
+    // 디바운싱: 500ms 후에 검색 실행
+    if (sliderTimeout) {
+      clearTimeout(sliderTimeout);
+    }
+    sliderTimeout = setTimeout(() => {
+      searchByRadiusSlider();
+    }, 500);
+  }
+};
+
+// 자동 검색 토글
+const toggleAutoSearch = () => {
+  autoSearch.value = !autoSearch.value;
+  if (autoSearch.value) {
+    searchByRadiusSlider(); // 자동 검색 활성화 시 즉시 검색
+  }
+};
+
+// 슬라이더 기반 반경 검색
+const searchByRadiusSlider = async () => {
+  if (!currentPosition.value || !searchRadius.value) return;
+
+  try {
+    loadingRadius.value = true;
+    radiusSearchResults.value = null;
+
+    // 전체 관광지를 가져와서 클라이언트에서 거리 필터링
+    const response = await attractionAPI.getAttractions({ limit: 5000 });
+    const allAttractions = response.data;
+
+    const radiusInKm = parseInt(searchRadius.value) / 1000;
+    const nearbyAttractions = [];
+    const distances = [];
+
+    allAttractions.forEach((attraction) => {
+      if (!attraction.latitude || !attraction.longitude) return;
+
+      const distance = calculateDistanceFromPosition(
+        currentPosition.value.lat,
+        currentPosition.value.lng,
+        attraction.latitude,
+        attraction.longitude
+      );
+
+      if (distance <= radiusInKm) {
+        nearbyAttractions.push(attraction);
+        distances.push(distance * 1000); // 미터로 변환
+      }
+    });
+
+    // 거리순으로 정렬
+    nearbyAttractions.sort((a, b) => {
+      const distanceA = calculateDistanceFromPosition(
+        currentPosition.value.lat,
+        currentPosition.value.lng,
+        a.latitude,
+        a.longitude
+      );
+      const distanceB = calculateDistanceFromPosition(
+        currentPosition.value.lat,
+        currentPosition.value.lng,
+        b.latitude,
+        b.longitude
+      );
+      return distanceA - distanceB;
+    });
+
+    // 검색 결과 업데이트
+    attractions.value = nearbyAttractions.slice(0, itemsPerPage.value);
+    totalCount.value = nearbyAttractions.length;
+    currentPage.value = 1;
+
+    // 결과 요약 생성
+    radiusSearchResults.value = {
+      count: nearbyAttractions.length,
+      nearest: distances.length > 0 ? Math.round(Math.min(...distances)) : 0,
+    };
+
+    // 검색 조건 초기화 (반경 검색 모드로 전환)
+    searchArea.value = "";
+    searchGugun.value = "";
+    searchContentType.value = "";
+    searchKeyword.value = "";
+
+    updateMapMarkers();
+
+    // 현재 위치 중심으로 지도 이동
+    if (map && currentPosition.value) {
+      const moveLatLon = new kakao.maps.LatLng(currentPosition.value.lat, currentPosition.value.lng);
+      map.setCenter(moveLatLon);
+
+      // 반경에 맞는 적절한 지도 레벨 설정
+      let mapLevel = 8;
+      if (radiusInKm <= 2) mapLevel = 6;
+      else if (radiusInKm <= 5) mapLevel = 7;
+      else if (radiusInKm <= 10) mapLevel = 8;
+      else if (radiusInKm <= 15) mapLevel = 9;
+      else mapLevel = 10;
+
+      map.setLevel(mapLevel);
+    }
+  } catch (error) {
+    console.error("반경 검색 중 오류 발생:", error);
+    radiusSearchResults.value = null;
+  } finally {
+    loadingRadius.value = false;
+  }
+};
+
+// 반경 검색 초기화
+const clearRadiusSearch = () => {
+  searchRadius.value = 5000;
+  radiusSearchResults.value = null;
+  autoSearch.value = false;
+
+  // 기본 검색으로 되돌리기
+  searchAttractions();
 };
 
 const changeMapType = () => {
@@ -902,6 +1101,266 @@ body {
   color: white;
 }
 
+/* 반경 슬라이더 컨테이너 */
+.radius-slider-container {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #e9ecef;
+}
+
+/* 슬라이더 래퍼 */
+.slider-wrapper {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+/* 슬라이더 라벨 */
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.slider-label-current {
+  font-weight: 600;
+  color: #0d6efd;
+  font-size: 14px;
+  background: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #0d6efd;
+}
+
+/* 슬라이더 스타일 */
+.radius-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #dee2e6;
+  outline: none;
+  margin: 8px 0;
+  position: relative;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* 슬라이더 트랙 (Webkit) */
+.radius-slider::-webkit-slider-track {
+  width: 100%;
+  height: 6px;
+  background: linear-gradient(to right, #28a745 0%, #ffc107 50%, #dc3545 100%);
+  border-radius: 3px;
+}
+
+/* 슬라이더 썸 (Webkit) */
+.radius-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #0d6efd;
+  cursor: pointer;
+  border: 3px solid white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.radius-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* 슬라이더 트랙 (Firefox) */
+.radius-slider::-moz-range-track {
+  width: 100%;
+  height: 6px;
+  background: linear-gradient(to right, #28a745 0%, #ffc107 50%, #dc3545 100%);
+  border-radius: 3px;
+  border: none;
+}
+
+/* 슬라이더 썸 (Firefox) */
+.radius-slider::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #0d6efd;
+  cursor: pointer;
+  border: 3px solid white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+/* 슬라이더 눈금 */
+.slider-ticks {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10px;
+  margin-top: -4px;
+}
+
+.tick {
+  width: 1px;
+  height: 8px;
+  background: #adb5bd;
+  opacity: 0.5;
+}
+
+.tick:nth-child(5n) {
+  height: 12px;
+  background: #6c757d;
+  opacity: 0.8;
+}
+
+/* 슬라이더 컨트롤 버튼들 */
+.slider-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.radius-search-btn,
+.radius-auto-btn,
+.radius-clear-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.radius-search-btn {
+  background: #0d6efd;
+  color: white;
+  flex: 1;
+}
+
+.radius-search-btn:hover:not(:disabled) {
+  background: #0b5ed7;
+  transform: translateY(-1px);
+}
+
+.radius-search-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.radius-search-btn.loading {
+  background: #6c757d;
+}
+
+.radius-auto-btn {
+  background: white;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+  min-width: 60px;
+}
+
+.radius-auto-btn:hover {
+  background: #f8f9fa;
+  border-color: #0d6efd;
+  color: #0d6efd;
+}
+
+.radius-auto-btn.active {
+  background: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+.radius-clear-btn {
+  background: #dc3545;
+  color: white;
+  min-width: 40px;
+  justify-content: center;
+}
+
+.radius-clear-btn:hover {
+  background: #bb2d3b;
+  transform: translateY(-1px);
+}
+
+/* 검색 결과 요약 */
+.radius-results-summary {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: white;
+  border-radius: 6px;
+  border-left: 3px solid #0d6efd;
+}
+
+.results-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 2px;
+}
+
+.results-info i {
+  color: #0d6efd;
+}
+
+.results-distance {
+  font-size: 11px;
+  color: #6c757d;
+}
+
+/* 애니메이션 */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.radius-slider-container {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 480px) {
+  .slider-controls {
+    flex-direction: column;
+  }
+
+  .radius-search-btn {
+    width: 100%;
+  }
+
+  .radius-auto-btn,
+  .radius-clear-btn {
+    min-width: auto;
+    flex: 1;
+  }
+
+  .slider-labels {
+    font-size: 11px;
+  }
+
+  .slider-label-current {
+    font-size: 12px;
+  }
+}
+
 /* 현재 위치 버튼 */
 .current-location-btn {
   top: 150px;
@@ -924,6 +1383,16 @@ body {
 .current-location-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* 현재 위치 버튼 활성 상태 */
+.current-location-btn.active {
+  background: #0d6efd;
+  color: white;
+}
+
+.current-location-btn.active:hover {
+  background: #0b5ed7;
 }
 
 /* 지도 컨트롤 버튼들 */
