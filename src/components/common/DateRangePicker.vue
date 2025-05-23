@@ -61,10 +61,10 @@
     <div class="picker-footer">
       <!-- 빠른 선택 버튼들 -->
       <div class="quick-select">
+        <button class="quick-btn" @click="setQuickDate(1)">당일</button>
         <button class="quick-btn" @click="setQuickDate(3)">3일</button>
         <button class="quick-btn" @click="setQuickDate(7)">1주일</button>
         <button class="quick-btn" @click="setQuickDate(14)">2주일</button>
-        <button class="quick-btn" @click="setQuickDate(30)">1개월</button>
       </div>
 
       <!-- 액션 버튼들 -->
@@ -89,17 +89,22 @@ import { ref, computed, onMounted, watch } from "vue";
 
 // Props & Emits
 const props = defineProps({
-  modelStartDate: {
+  startDate: {
     type: String,
     default: "",
   },
-  modelEndDate: {
+  endDate: {
     type: String,
     default: "",
   },
   minDate: {
     type: Date,
-    default: () => new Date(),
+    default: () => {
+      // 오늘 날짜가 선택 가능하도록 minDate를 오늘로 설정
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return today;
+    },
   },
   maxDate: {
     type: Date,
@@ -111,7 +116,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:startDate", "update:endDate", "dateSelected"]);
+const emit = defineEmits(["update:startDate", "update:endDate", "dates-changed"]);
 
 // 상태 관리
 const currentMonth = ref(new Date());
@@ -128,11 +133,11 @@ const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
 
 // Props 초기값 설정
 onMounted(() => {
-  if (props.modelStartDate) {
-    startDate.value = new Date(props.modelStartDate);
+  if (props.startDate) {
+    startDate.value = new Date(props.startDate);
   }
-  if (props.modelEndDate) {
-    endDate.value = new Date(props.modelEndDate);
+  if (props.endDate) {
+    endDate.value = new Date(props.endDate);
   }
 });
 
@@ -156,6 +161,8 @@ const hintMessage = computed(() => {
     return "시작일을 선택해주세요";
   } else if (!endDate.value) {
     return "종료일을 선택해주세요";
+  } else if (startDate.value.getTime() === endDate.value.getTime()) {
+    return `당일 여행을 계획하고 있습니다`;
   } else {
     return `${travelDays.value}일간의 멋진 여행을 계획해보세요!`;
   }
@@ -189,7 +196,13 @@ const generateCalendarDays = (date) => {
 const isDateDisabled = (date) => {
   const checkDate = new Date(date);
   checkDate.setHours(0, 0, 0, 0);
-  return checkDate < props.minDate || checkDate > props.maxDate;
+
+  // 오늘 날짜를 비교용으로 생성
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // 오늘 날짜는 선택 가능하도록 설정
+  return checkDate < today || checkDate > props.maxDate;
 };
 
 const handleDateClick = (date) => {
@@ -221,6 +234,14 @@ const handleDateClick = (date) => {
         }, 500);
       }
     }
+  }
+
+  // 부모 컴포넌트에 변경된 날짜만 알리고, '확인' 버튼 클릭 시에만 선택 완료 이벤트 발생
+  if (startDate.value) {
+    emit("update:startDate", formatDateForInput(startDate.value));
+  }
+  if (endDate.value) {
+    emit("update:endDate", formatDateForInput(endDate.value));
   }
 };
 
@@ -292,12 +313,16 @@ const navigateMonth = (direction) => {
 const setQuickDate = (days) => {
   const start = new Date(today.value);
   const end = new Date(today.value);
-  end.setDate(end.getDate() + days - 1);
+  end.setDate(end.getDate() + days - 1); // 당일 여행의 경우 days가 1이면 end는 start와 같은 날짜가 됨
 
   startDate.value = start;
   endDate.value = end;
   isSelectingEnd.value = false;
   showHint.value = true;
+
+  // 날짜만 변경하고 실제 확정은 '확인' 버튼을 통해 이루어지도록 함
+  emit("update:startDate", formatDateForInput(start));
+  emit("update:endDate", formatDateForInput(end));
 };
 
 const clearDates = () => {
@@ -305,6 +330,10 @@ const clearDates = () => {
   endDate.value = null;
   isSelectingEnd.value = false;
   showHint.value = true;
+
+  // 초기화 후 부모에게 알림
+  emit("update:startDate", "");
+  emit("update:endDate", "");
 };
 
 const confirmSelection = () => {
@@ -312,9 +341,8 @@ const confirmSelection = () => {
     const startDateStr = formatDateForInput(startDate.value);
     const endDateStr = formatDateForInput(endDate.value);
 
-    emit("update:startDate", startDateStr);
-    emit("update:endDate", endDateStr);
-    emit("dateSelected", {
+    // '확인' 버튼 클릭 시에만 dates-changed 이벤트 발생
+    emit("dates-changed", {
       startDate: startDateStr,
       endDate: endDateStr,
       duration: travelDays.value,
@@ -337,7 +365,7 @@ const formatDateForInput = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-// 선택된 날짜가 변경될 때 부모 컴포넌트에 알림
+// watch 수정 - 자동 emit 방지
 watch([startDate, endDate], () => {
   if (startDate.value && endDate.value) {
     setTimeout(() => {
@@ -345,33 +373,12 @@ watch([startDate, endDate], () => {
     }, 2000);
   }
 });
-
-// 날짜 변경 시 부모에게 전달
-watch(startDate, (newVal) => {
-  emit("update:startDate", newVal ? newVal.toISOString().split("T")[0] : "");
-});
-
-watch(endDate, (newVal) => {
-  emit("update:endDate", newVal ? newVal.toISOString().split("T")[0] : "");
-});
-
-// 선택이 완료된 경우 부모에게 전체 범위 전달
-watch([startDate, endDate], ([newStart, newEnd]) => {
-  if (newStart && newEnd) {
-    emit("dateSelected", {
-      startDate: newStart.toISOString().split("T")[0],
-      endDate: newEnd.toISOString().split("T")[0],
-      travelDays: travelDays.value,
-    });
-  }
-});
 </script>
 
 <style scoped>
 .date-range-picker {
-  max-width: 650px;
-  max-height: 1000px;
-  margin: 20px auto;
+  max-width: 600px;
+  margin: 0 auto;
   background: white;
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
@@ -416,8 +423,12 @@ watch([startDate, endDate], ([newStart, newEnd]) => {
   padding: 8px 12px;
   border-radius: 8px;
   font-weight: 600;
-  min-width: 80px;
+  min-width: 100px;
   border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.date-display.empty {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .date-separator {
@@ -547,6 +558,7 @@ watch([startDate, endDate], ([newStart, newEnd]) => {
   gap: 8px;
   margin-bottom: 16px;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
 .quick-btn {
@@ -601,6 +613,21 @@ watch([startDate, endDate], ([newStart, newEnd]) => {
 .confirm-btn:disabled {
   background: #ccc;
   cursor: not-allowed;
+}
+
+.hint-message {
+  padding: 12px 20px;
+  background: #f0f4ff;
+  color: #4a5568;
+  text-align: center;
+  font-size: 14px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.travel-alert {
+  margin-top: 20px;
+  font-size: 14px;
+  text-align: center;
 }
 
 @media (max-width: 480px) {
