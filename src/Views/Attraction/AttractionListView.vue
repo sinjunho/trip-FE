@@ -246,7 +246,7 @@
             </div>
           </div>
 
-          <!-- 개선된 페이지네이션 -->
+          <!-- 페이지네이션 -->
           <div v-if="totalPages > 1" class="pagination">
             <button class="page-btn" :disabled="currentPage === 1" @click="changePage(1)">
               <i class="fas fa-angle-double-left"></i>
@@ -777,26 +777,55 @@ const searchAttractions = async () => {
     loading.value = true;
     currentPage.value = 1;
 
+    // 검색 조건이 하나도 없으면 경고
+    if (!searchKeyword.value && !searchArea.value && !searchContentType.value) {
+      alert("검색 조건을 입력해주세요.");
+      loading.value = false;
+      return;
+    }
+
     const params = {
+      keyword: searchKeyword.value.trim(),
       areaCode: searchArea.value,
       siGunGuCode: searchGugun.value,
       contentTypeName: searchContentType.value,
-      keyword: searchKeyword.value,
       offset: 0,
       limit: itemsPerPage.value,
     };
 
-    const [attractionsResponse, countResponse] = await Promise.all([
-      attractionAPI.getAttractions(params),
-      attractionAPI.getAttractions({ ...params, limit: 1000 }), // 전체 개수 조회용
-    ]);
+    console.log("검색 파라미터:", params);
 
-    attractions.value = attractionsResponse.data;
-    totalCount.value = countResponse.data.length;
+    // 키워드 검색 API 호출
+    const response = await attractionAPI.searchAttractions(params);
+
+    console.log("검색 응답:", response.data);
+
+    if (response.data.attractions) {
+      attractions.value = response.data.attractions;
+      totalCount.value = response.data.totalCount || 0;
+    } else {
+      // 기존 API 응답 형식과 호환
+      attractions.value = response.data;
+      totalCount.value = response.data.length;
+    }
+
+    // 검색 결과가 없을 때 처리
+    if (attractions.value.length === 0) {
+      console.log("검색 결과 없음");
+      // no-results 상태가 template에서 자동으로 표시됨
+    }
 
     updateMapMarkers();
   } catch (error) {
     console.error("관광지 검색 중 오류 발생:", error);
+
+    // 에러 메시지 표시
+    if (error.response?.status === 404) {
+      attractions.value = [];
+      totalCount.value = 0;
+    } else {
+      alert("검색 중 오류가 발생했습니다.");
+    }
   } finally {
     loading.value = false;
   }

@@ -2,6 +2,11 @@
 import apiClient from "./index";
 
 export default {
+  // 키워드 검색 함수 추가
+  searchAttractions(params) {
+    return apiClient.get("/attractions/search", { params });
+  },
+
   // 관광지 목록 조회
   getAttractions(params) {
     return apiClient.get("/attractions", { params });
