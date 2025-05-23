@@ -59,7 +59,13 @@
                       placeholder="어떤 여행인지 간단히 설명해주세요"
                     ></textarea>
                   </div>
-                  <DateRangePicker />
+                  <DateRangePicker 
+  :start-date="plan.startDate"
+  :end-date="plan.endDate"
+  @update:start-date="plan.startDate = $event"
+  @update:end-date="plan.endDate = $event"
+  @dates-changed="onDatesChanged"
+/>
                   <!-- <div class="row">
                     <div class="col-md-6 mb-3">
                       <label for="startDate" class="form-label"> <i class="fas fa-calendar-alt me-2"></i>시작일 </label>
