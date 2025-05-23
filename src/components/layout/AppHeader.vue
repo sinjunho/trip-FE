@@ -12,7 +12,9 @@
             <router-link :to="{ name: 'attractions' }">관광지 검색</router-link>
           </li>
           <li><router-link :to="{ name: 'board-list' }">여행 커뮤니티</router-link></li>
-
+          <li v-if="isLoggedIn">
+            <router-link :to="{ name: 'plans' }">내 여행 계획 보기</router-link>
+          </li>
           <!-- 로그인하지 않은 경우 -->
           <template v-if="!isLoggedIn">
             <li>
@@ -40,6 +42,8 @@
                 <router-link :to="{ name: 'mypage' }"><i class="fas fa-user"></i> 마이페이지</router-link>
                 <router-link :to="{ name: 'board-write' }"><i class="fas fa-pen"></i> 글 작성하기</router-link>
                 <!-- 관리자 메뉴 항목 추가 -->
+                <router-link :to="{ name: 'plan-create' }"><i class="fas fa-pen"></i> 여행계획 만들기</router-link>
+
                 <router-link v-if="isAdmin" :to="{ name: 'admin-dashboard' }">
                   <i class="fas fa-cog"></i> 관리자 대시보드
                 </router-link>
