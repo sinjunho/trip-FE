@@ -36,6 +36,29 @@
               <div class="row">
                 <div class="col-md-8">
                   <div class="mb-4">
+                    <label class="form-label"><i class="fas fa-calendar-alt me-2"></i>여행 기간</label>
+                    <DateRangePicker
+                      :start-date="plan.startDate"
+                      :end-date="plan.endDate"
+                      @update:start-date="plan.startDate = $event"
+                      @update:end-date="plan.endDate = $event"
+                      @dates-changed="onDatesChanged"
+                    />
+                  </div>
+                </div>
+
+                <div class="col-md-4">
+                  <div class="travel-tips">
+                    <h5><i class="fas fa-lightbulb text-warning me-2"></i>여행 계획 팁</h5>
+                    <ul class="tips-list">
+                      <li>구체적인 제목을 지으면 나중에 찾기 쉬워요</li>
+                      <li>여행 기간은 너무 빡빡하지 않게 계획하세요</li>
+                      <li>날씨와 계절을 고려해주세요</li>
+                      <li>교통편 예약도 미리 확인해보세요</li>
+                    </ul>
+                  </div>
+                  <br />
+                  <div class="mb-4">
                     <label for="title" class="form-label"> <i class="fas fa-plane me-2"></i>여행 제목 </label>
                     <input
                       type="text"
@@ -59,54 +82,6 @@
                       placeholder="어떤 여행인지 간단히 설명해주세요"
                     ></textarea>
                   </div>
-                  <DateRangePicker 
-  :start-date="plan.startDate"
-  :end-date="plan.endDate"
-  @update:start-date="plan.startDate = $event"
-  @update:end-date="plan.endDate = $event"
-  @dates-changed="onDatesChanged"
-/>
-                  <!-- <div class="row">
-                    <div class="col-md-6 mb-3">
-                      <label for="startDate" class="form-label"> <i class="fas fa-calendar-alt me-2"></i>시작일 </label>
-                      <input
-                        type="date"
-                        id="startDate"
-                        v-model="plan.startDate"
-                        class="form-control"
-                        required
-                        @change="calculateDays"
-                      />
-                    </div>
-                    <div class="col-md-6 mb-3">
-                      <label for="endDate" class="form-label"> <i class="fas fa-calendar-check me-2"></i>종료일 </label>
-                      <input
-                        type="date"
-                        id="endDate"
-                        v-model="plan.endDate"
-                        class="form-control"
-                        required
-                        @change="calculateDays"
-                      />
-                    </div>
-                  </div>
-
-                  <div v-if="dayCount > 0" class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    총 <strong>{{ dayCount }}일</strong>간의 여행입니다.
-                  </div> -->
-                </div>
-
-                <div class="col-md-4">
-                  <div class="travel-tips">
-                    <h5><i class="fas fa-lightbulb text-warning me-2"></i>여행 계획 팁</h5>
-                    <ul class="tips-list">
-                      <li>구체적인 제목을 지으면 나중에 찾기 쉬워요</li>
-                      <li>여행 기간은 너무 빡빡하지 않게 계획하세요</li>
-                      <li>날씨와 계절을 고려해주세요</li>
-                      <li>교통편 예약도 미리 확인해보세요</li>
-                    </ul>
-                  </div>
                 </div>
               </div>
 
@@ -114,7 +89,7 @@
                 <router-link to="/plans" class="btn btn-outline-secondary">
                   <i class="fas fa-arrow-left me-2"></i>취소
                 </router-link>
-                <button type="submit" class="btn btn-primary" :disabled="!isStep1Valid">
+                <button type="button" class="btn btn-primary" @click="goToNextStep" :disabled="!isStep1Valid">
                   다음 단계 <i class="fas fa-arrow-right ms-2"></i>
                 </button>
               </div>
@@ -127,22 +102,17 @@
     <!-- Step 2: 여행지 선택 (전체화면 지도) -->
     <div v-if="currentStep === 2" class="map-selection-view">
       <!-- 검색 패널 토글 버튼 -->
-      <button
-        class="search-panel-toggle"
-        :class="{ active: showSearchPanel }"
-        @click="toggleSearchPanel"
-      >
+      <button class="search-panel-toggle" :class="{ active: showSearchPanel }" @click="toggleSearchPanel">
         <i class="fas fa-search"></i>
         <span>검색</span>
       </button>
 
       <!-- 하단 네비게이션 -->
       <div class="bottom-navigation">
-        <button class="step-back-btn" @click="currentStep = 1">
-          <i class="fas fa-arrow-left me-2"></i>이전 단계
-        </button>
+        <button class="step-back-btn" @click="currentStep = 1"><i class="fas fa-arrow-left me-2"></i>이전 단계</button>
         <div class="selected-count">
-          선택된 여행지: <span class="count">{{ selectedAttractions.length }}</span>개
+          선택된 여행지: <span class="count">{{ selectedAttractions.length }}</span
+          >개
         </div>
         <button class="step-next-btn" @click="nextStep" :disabled="selectedAttractions.length === 0">
           다음 단계 <i class="fas fa-arrow-right ms-2"></i>
@@ -150,7 +120,7 @@
       </div>
 
       <!-- 검색 결과 네비게이션 패널 -->
-      <div class="search-results-nav" :class="{ 'show': searchResults.length > 0, 'collapsed': searchResultsCollapsed }">
+      <div class="search-results-nav" :class="{ show: searchResults.length > 0, collapsed: searchResultsCollapsed }">
         <div class="search-results-header" @click="toggleSearchResults">
           <div class="header-content">
             <h5>
@@ -158,7 +128,7 @@
               검색 결과 ({{ searchResults.length }}개)
             </h5>
             <div class="header-actions">
-              <button class="toggle-search-results" :class="{ 'collapsed': searchResultsCollapsed }">
+              <button class="toggle-search-results" :class="{ collapsed: searchResultsCollapsed }">
                 <i class="fas fa-chevron-up"></i>
               </button>
               <button class="close-search-results" @click.stop="clearSearchResults">
@@ -167,21 +137,17 @@
             </div>
           </div>
         </div>
-        
-        <div class="search-results-content" :class="{ 'collapsed': searchResultsCollapsed }">
+
+        <div class="search-results-content" :class="{ collapsed: searchResultsCollapsed }">
           <div class="search-results-list">
             <div
               v-for="(attraction, index) in searchResults"
               :key="attraction.no"
               class="search-result-item"
-              :class="{ 'selected': selectedAttractions.some(s => s.no === attraction.no) }"
+              :class="{ selected: selectedAttractions.some((s) => s.no === attraction.no) }"
               @click="selectSearchResult(attraction)"
             >
-              <img
-                :src="attraction.firstImage1 || '/img/no-image.jpg'"
-                :alt="attraction.title"
-                class="result-thumb"
-              />
+              <img :src="attraction.firstImage1 || '/img/no-image.jpg'" :alt="attraction.title" class="result-thumb" />
               <div class="result-info">
                 <h6 class="result-title">{{ attraction.title }}</h6>
                 <p class="result-location">
@@ -193,18 +159,14 @@
                 </div>
               </div>
               <div class="result-actions">
-                <button 
-                  v-if="!selectedAttractions.some(s => s.no === attraction.no)"
+                <button
+                  v-if="!selectedAttractions.some((s) => s.no === attraction.no)"
                   class="btn btn-sm btn-primary add-btn"
                   @click.stop="addAttractionToSelection(attraction)"
                 >
                   <i class="fas fa-plus"></i>
                 </button>
-                <button 
-                  v-else
-                  class="btn btn-sm btn-success added-btn"
-                  disabled
-                >
+                <button v-else class="btn btn-sm btn-success added-btn" disabled>
                   <i class="fas fa-check"></i>
                 </button>
               </div>
@@ -213,21 +175,19 @@
 
           <!-- 검색 결과 페이지네이션 -->
           <div v-if="searchTotalPages > 1" class="search-pagination">
-            <button 
-              class="page-btn" 
-              :disabled="searchCurrentPage === 1" 
+            <button
+              class="page-btn"
+              :disabled="searchCurrentPage === 1"
               @click="changeSearchPage(searchCurrentPage - 1)"
             >
               <i class="fas fa-chevron-left"></i>
             </button>
-            
-            <span class="page-info">
-              {{ searchCurrentPage }} / {{ searchTotalPages }}
-            </span>
-            
-            <button 
-              class="page-btn" 
-              :disabled="searchCurrentPage === searchTotalPages" 
+
+            <span class="page-info"> {{ searchCurrentPage }} / {{ searchTotalPages }} </span>
+
+            <button
+              class="page-btn"
+              :disabled="searchCurrentPage === searchTotalPages"
               @click="changeSearchPage(searchCurrentPage + 1)"
             >
               <i class="fas fa-chevron-right"></i>
@@ -262,11 +222,7 @@
               <i class="fas fa-crosshairs"></i>
               내 위치
             </label>
-            <button 
-              class="current-location-btn-panel" 
-              @click="getCurrentLocation"
-              :disabled="loadingLocation"
-            >
+            <button class="current-location-btn-panel" @click="getCurrentLocation" :disabled="loadingLocation">
               <i class="fas fa-crosshairs me-2" v-if="!loadingLocation"></i>
               <i class="fas fa-spinner fa-spin me-2" v-else></i>
               <span v-if="!loadingLocation">현재 위치로 이동</span>
@@ -375,11 +331,7 @@
               선택된 관광지 ({{ selectedAttractions.length }}개)
             </label>
             <div class="selected-list">
-              <div
-                v-for="(attraction, index) in selectedAttractions"
-                :key="attraction.no"
-                class="selected-item"
-              >
+              <div v-for="(attraction, index) in selectedAttractions" :key="attraction.no" class="selected-item">
                 <img
                   :src="attraction.firstImage1 || '/img/no-image.jpg'"
                   :alt="attraction.title"
@@ -390,11 +342,7 @@
                   <p class="mb-0 text-muted small">{{ attraction.sido }}</p>
                 </div>
                 <div class="selected-actions">
-                  <select
-                    v-model="attraction.assignedDay"
-                    class="form-select form-select-sm"
-                    style="width: 80px;"
-                  >
+                  <select v-model="attraction.assignedDay" class="form-select form-select-sm" style="width: 80px">
                     <option value="">일차</option>
                     <option v-for="day in dayCount" :key="day" :value="day">{{ day }}일</option>
                   </select>
@@ -450,9 +398,7 @@
           </div>
 
           <div class="detail-actions">
-            <button class="detail-btn primary" @click="addAttractionToSelection(attractionDetail)">
-              여행지 추가
-            </button>
+            <button class="detail-btn primary" @click="addAttractionToSelection(attractionDetail)">여행지 추가</button>
           </div>
         </div>
       </div>
@@ -608,7 +554,7 @@
               <span class="spinner-border spinner-border-sm me-2"></span>
               저장 중...
             </span>
-            <span v-else"> <i class="fas fa-save me-2"></i>여행 계획 저장 </span>
+            <span v-else> <i class="fas fa-save me-2"></i>여행 계획 저장 </span>
           </button>
         </div>
       </div>
@@ -666,7 +612,7 @@ import { useAuthStore } from "@/stores/auth";
 import planAPI from "@/api/plan";
 import attractionAPI from "@/api/attraction";
 import draggable from "vuedraggable";
-import DateRangePicker from '@/components/common/DateRangePicker.vue'
+import DateRangePicker from "@/components/common/DateRangePicker.vue";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -726,6 +672,15 @@ let map = null;
 let markers = [];
 let currentPosition = null;
 
+const handleDatesChanged = (dates) => {
+  // 날짜가 변경되어도 다음 단계로 자동 이동하지 않음
+  // 필요한 경우 여기서 날짜 관련 로직 처리
+  console.log("날짜가 변경되었습니다:", dates);
+
+  // 날짜 변경 시 dayCount 업데이트를 위해 호출
+  calculateDays();
+};
+
 // 계산된 속성
 const dayCount = computed(() => {
   if (!plan.value.startDate || !plan.value.endDate) return 0;
@@ -745,19 +700,27 @@ const unassignedAttractions = computed(() => {
 
 const mapTypeTitle = computed(() => {
   switch (mapType.value) {
-    case "ROADMAP": return "위성지도";
-    case "SKYVIEW": return "하이브리드";
-    case "HYBRID": return "일반지도";
-    default: return "지도 변경";
+    case "ROADMAP":
+      return "위성지도";
+    case "SKYVIEW":
+      return "하이브리드";
+    case "HYBRID":
+      return "일반지도";
+    default:
+      return "지도 변경";
   }
 });
 
 const mapTypeIcon = computed(() => {
   switch (mapType.value) {
-    case "ROADMAP": return "fas fa-satellite";
-    case "SKYVIEW": return "fas fa-layer-group";
-    case "HYBRID": return "fas fa-map";
-    default: return "fas fa-map";
+    case "ROADMAP":
+      return "fas fa-satellite";
+    case "SKYVIEW":
+      return "fas fa-layer-group";
+    case "HYBRID":
+      return "fas fa-map";
+    default:
+      return "fas fa-map";
   }
 });
 
@@ -785,6 +748,17 @@ const nextStep = () => {
       }, 100);
     }
   }
+};
+
+// 명시적인 다음 단계 이동 함수
+const goToNextStep = () => {
+  // 필요한 유효성 검사
+  if (!isStep1Valid.value) {
+    return;
+  }
+
+  // 다음 단계로 이동
+  nextStep();
 };
 
 const toggleSearchPanel = () => {
@@ -934,7 +908,7 @@ const loadRandomAttractions = async () => {
   try {
     const response = await attractionAPI.getRandomAttractions(20);
     const attractions = response.data;
-    
+
     // 지도에 마커 표시
     updateMapMarkers(attractions);
   } catch (error) {
@@ -959,7 +933,7 @@ const searchAttractions = async () => {
     // 검색 결과와 전체 개수를 위한 별도 요청
     const [searchResponse, countResponse] = await Promise.all([
       attractionAPI.getAttractions(params),
-      attractionAPI.getAttractions({ ...params, limit: 1000 }) // 전체 개수 조회용
+      attractionAPI.getAttractions({ ...params, limit: 1000 }), // 전체 개수 조회용
     ]);
 
     const attractions = searchResponse.data;
@@ -1027,7 +1001,7 @@ const clearSearchResults = () => {
   searchCurrentPage.value = 1;
   searchTotalPages.value = 0;
   searchResultsCollapsed.value = false; // 패널 상태 초기화
-  
+
   // 기본 관광지 다시 로드
   loadRandomAttractions();
 };
@@ -1048,14 +1022,14 @@ const searchNearbyAttractions = async (lat, lng) => {
 
     if (nearbyAttractions.length > 0) {
       const closest = nearbyAttractions.slice(0, 10);
-      
+
       // 검색 결과로 설정
       searchResults.value = closest;
       searchCurrentPage.value = 1;
       searchTotalPages.value = 1;
-      
+
       updateMapMarkers(closest);
-      
+
       if (closest.length > 0) {
         // 첫 번째 관광지 상세 정보 표시
         selectAttraction(closest[0]);
@@ -1088,10 +1062,10 @@ const updateMapMarkers = (attractions) => {
     const position = new window.kakao.maps.LatLng(attraction.latitude, attraction.longitude);
 
     // 선택된 관광지인지 확인
-    const isSelected = selectedAttractions.value.some(selected => selected.no === attraction.no);
-    
+    const isSelected = selectedAttractions.value.some((selected) => selected.no === attraction.no);
+
     // 마커 이미지 설정
-    const imageSrc = isSelected 
+    const imageSrc = isSelected
       ? "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png"
       : "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png";
     const imageSize = new window.kakao.maps.Size(24, 35);
@@ -1174,22 +1148,22 @@ const addAttractionToSelection = (attraction) => {
   };
 
   selectedAttractions.value.push(enhancedAttraction);
-  
+
   // 지도 마커 업데이트 (선택된 관광지 표시)
-  updateMapMarkers(markers.map(m => m.attraction));
-  
+  updateMapMarkers(markers.map((m) => m.attraction));
+
   // 상세 카드 닫기
   closeDetail();
-  
+
   alert(`${attraction.title}이(가) 여행지 목록에 추가되었습니다!`);
 };
 
 const removeAttraction = (index) => {
   const removed = selectedAttractions.value.splice(index, 1)[0];
-  
+
   // 지도 마커 업데이트
-  updateMapMarkers(markers.map(m => m.attraction));
-  
+  updateMapMarkers(markers.map((m) => m.attraction));
+
   alert(`${removed.title}이(가) 여행지 목록에서 제거되었습니다.`);
 };
 
@@ -1449,7 +1423,7 @@ onMounted(() => {
 }
 
 .bottom-navigation {
-  background: rgba(255,255,255,0.8); /* 흰색, 80% 불투명 */
+  background: rgba(255, 255, 255, 0.8); /* 흰색, 80% 불투명 */
   position: fixed;
   bottom: 0;
   left: 0;
@@ -1532,7 +1506,6 @@ onMounted(() => {
 }
 
 .search-panel-toggle {
-
   top: 90px;
   left: 20px;
   padding: 12px 16px;
@@ -1577,7 +1550,7 @@ onMounted(() => {
 
 /* 검색 결과 네비게이션 패널 */
 .search-results-nav {
-  background: rgba(255,255,255,0.85); /* 흰색, 85% 불투명 */
+  background: rgba(255, 255, 255, 0.85); /* 흰색, 85% 불투명 */
   position: fixed;
   bottom: 80px; /* 하단 네비게이션 위 */
   left: 20px;
@@ -1598,13 +1571,12 @@ onMounted(() => {
 }
 
 .search-results-nav.show {
-  background: rgba(255,255,255,0.7); /* 흰색, 70% 불투명 */
+  background: rgba(255, 255, 255, 0.7); /* 흰색, 70% 불투명 */
   transform: translateY(0);
   opacity: 1;
 }
 
 .search-results-nav.collapsed {
-  
   max-height: 60px; /* 헤더만 보이는 높이 */
 }
 
@@ -1622,7 +1594,6 @@ onMounted(() => {
 }
 
 .header-content {
-  
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1900,7 +1871,6 @@ onMounted(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  
 }
 
 .search-panel.panel-open {
@@ -1908,7 +1878,6 @@ onMounted(() => {
 }
 
 .search-panel-header {
-  
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1975,7 +1944,6 @@ onMounted(() => {
 }
 
 .search-select {
-  
   width: 100%;
   padding: 8px 12px;
   border: 1px solid #ddd;
@@ -2034,7 +2002,6 @@ onMounted(() => {
 
 .popular-item,
 .selected-item {
-  
   display: flex;
   align-items: center;
   padding: 8px;
@@ -2052,7 +2019,6 @@ onMounted(() => {
 
 .popular-thumb,
 .selected-thumb {
-  
   width: 40px;
   height: 40px;
   object-fit: cover;
@@ -2062,7 +2028,6 @@ onMounted(() => {
 
 .popular-info,
 .selected-info {
-  
   flex: 1;
 }
 
@@ -2073,7 +2038,6 @@ onMounted(() => {
 }
 
 .selected-actions {
-  
   display: flex;
   align-items: center;
 }
@@ -2326,9 +2290,7 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  
   .map-selection-view {
-    
     padding-top: 60px;
     padding-bottom: 70px; /* 모바일에서 하단 네비게이션 공간 */
   }
@@ -2360,17 +2322,14 @@ onMounted(() => {
   }
 
   .search-panel.panel-open {
-    
     left: 0;
   }
 
   .search-panel-toggle.active {
-    
     left: calc(100vw - 100px);
   }
 
   .detail-card {
-    
     width: calc(100vw - 20px);
     bottom: 90px; /* 하단 네비게이션 위로 */
     right: 10px;
@@ -2385,7 +2344,6 @@ onMounted(() => {
   }
 
   .search-results-list {
-    
     max-height: calc(40vh - 100px);
   }
 
@@ -2395,8 +2353,7 @@ onMounted(() => {
   }
 
   .search-panel-toggle {
-    
-  background: rgba(255,255,255,0.7); /* 흰색, 70% 불투명 */
+    background: rgba(255, 255, 255, 0.7); /* 흰색, 70% 불투명 */
     left: 10px;
     top: 70px;
   }
@@ -2430,7 +2387,6 @@ onMounted(() => {
   }
 
   .search-results-nav {
-    
     left: 5px;
     right: 5px;
     bottom: 70px;
@@ -2438,7 +2394,6 @@ onMounted(() => {
   }
 
   .search-results-header {
-    
     padding: 12px 15px;
   }
 
@@ -2452,13 +2407,10 @@ onMounted(() => {
   }
 
   .search-result-item {
-    
     padding: 10px;
   }
 
   .result-thumb {
-    
-    
     width: 50px;
     height: 38px;
     margin-right: 10px;
@@ -2473,12 +2425,10 @@ onMounted(() => {
   }
 
   .search-panel-content {
-    
     padding: 0;
   }
 
   .search-section {
-    
     padding: 8px 12px;
   }
 
