@@ -3,7 +3,7 @@
   <header class="app-header">
     <div class="container">
       <div class="logo">
-        <router-link to="/">Enjoy <span>Trip</span></router-link>
+        <router-link to="/">Mr. <span>Route</span></router-link>
       </div>
 
       <nav>
