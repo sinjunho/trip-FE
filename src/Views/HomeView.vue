@@ -4,7 +4,7 @@
     <section class="title-page">
       <div class="title-page-content">
         <h1>
-          지금 <span class="highlight">Enjoy Trip</span>과 함께 <br />
+          지금 <span class="highlight">Mr. Route</span>과 함께 <br />
           우리지역의 관광지를 알아보고 <br />
           나만의 여행 계획을 만들어보세요!
         </h1>
