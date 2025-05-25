@@ -32,9 +32,7 @@
             <p class="text-muted mb-0">여행의 기본 정보를 설정해보세요</p>
           </div>
           <div class="card-body">
-            <form @submit.prevent="nextStep">
-              <div class="row">
-                <div class="col-md-8">
+            <div class="col-md-8">
                   <div class="mb-4">
                     <label class="form-label"><i class="fas fa-calendar-alt me-2"></i>여행 기간</label>
                     <DateRangePicker
@@ -46,7 +44,9 @@
                     />
                   </div>
                 </div>
-
+            <form @submit.prevent="nextStep">
+              <div class="row">
+                
                 <div class="col-md-4">
                   <div class="travel-tips">
                     <h5><i class="fas fa-lightbulb text-warning me-2"></i>여행 계획 팁</h5>

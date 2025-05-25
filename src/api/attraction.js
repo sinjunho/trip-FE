@@ -46,6 +46,9 @@ export default {
   getGugun(code) {
     return apiClient.get(`/attractions/gugun/${code}`);
   },
+  searchInBounds(params) {
+    return apiClient.get("/attractions/bounds", { params });
+  },
 };
 export const getTopAttractions = () => {
   return apiClient.get("/attractions/rank");
