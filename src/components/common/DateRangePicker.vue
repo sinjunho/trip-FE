@@ -365,12 +365,15 @@ const formatDateForInput = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-// watch 수정 - 자동 emit 방지
-watch([startDate, endDate], () => {
-  if (startDate.value && endDate.value) {
-    setTimeout(() => {
-      showHint.value = false;
-    }, 2000);
+
+// 선택이 완료된 경우 부모에게 전체 범위 전달
+watch([startDate, endDate], ([newStart, newEnd]) => {
+  if (newStart && newEnd) {
+    emit("dateSelected", {
+      startDate: newStart.toISOString().split("T")[0],
+      endDate: newEnd.toISOString().split("T")[0],
+      travelDays: travelDays.value,
+    });
   }
 });
 </script>
