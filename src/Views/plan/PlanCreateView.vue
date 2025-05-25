@@ -31,7 +31,7 @@
             <h2 class="mb-0">📝 여행 기본 정보를 입력해주세요</h2>
             <p class="text-muted mb-0">여행의 기본 정보를 설정해보세요</p>
           </div>
-          <div class="card-body">
+          <div class="card-body" style="display: flex;">
             <div class="col-md-8">
                   <div class="mb-4">
                     <label class="form-label"><i class="fas fa-calendar-alt me-2"></i>여행 기간</label>
@@ -45,8 +45,7 @@
                   </div>
                 </div>
             <form @submit.prevent="nextStep">
-              <div class="row">
-                
+              <div class="row" style="display: flex; width: 950px; margin-top: 3.4%;" >
                 <div class="col-md-4">
                   <div class="travel-tips">
                     <h5><i class="fas fa-lightbulb text-warning me-2"></i>여행 계획 팁</h5>
@@ -58,7 +57,7 @@
                     </ul>
                   </div>
                   <br />
-                  <div class="mb-4">
+                  <div class="mb-4" style="margin-top: 100px;">
                     <label for="title" class="form-label"> <i class="fas fa-plane me-2"></i>여행 제목 </label>
                     <input
                       type="text"
@@ -85,7 +84,7 @@
                 </div>
               </div>
 
-              <div class="d-flex justify-content-between mt-4">
+              <div class="d-flex justify-content-between mt-4" style="width: 300px; ">
                 <router-link to="/plans" class="btn btn-outline-secondary">
                   <i class="fas fa-arrow-left me-2"></i>취소
                 </router-link>
@@ -119,82 +118,83 @@
         </button>
       </div>
 
-      <!-- 검색 결과 네비게이션 패널 -->
-      <div class="search-results-nav" :class="{ show: searchResults.length > 0, collapsed: searchResultsCollapsed }">
-        <div class="search-results-header" @click="toggleSearchResults">
-          <div class="header-content">
-            <h5>
-              <i class="fas fa-search me-2"></i>
-              검색 결과 ({{ searchResults.length }}개)
-            </h5>
-            <div class="header-actions">
-              <button class="toggle-search-results" :class="{ collapsed: searchResultsCollapsed }">
-                <i class="fas fa-chevron-up"></i>
-              </button>
-              <button class="close-search-results" @click.stop="clearSearchResults">
-                <i class="fas fa-times"></i>
-              </button>
-            </div>
-          </div>
+      
+  <!-- 검색 결과 네비게이션 패널 -->
+  <div class="search-results-nav" :class="{ show: attractions.length > 0, collapsed: searchResultsCollapsed }">
+    <div class="search-results-header" @click="toggleSearchResults">
+      <div class="header-content">
+        <h5>
+          <i class="fas fa-search me-2"></i>
+          검색 결과 ({{ totalCount }}개)
+        </h5>
+        <div class="header-actions">
+          <button class="toggle-search-results" :class="{ collapsed: searchResultsCollapsed }">
+            <i class="fas fa-chevron-up"></i>
+          </button>
+          <button class="close-search-results" @click.stop="clearSearchResults">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
+      </div>
+    </div>
 
-        <div class="search-results-content" :class="{ collapsed: searchResultsCollapsed }">
-          <div class="search-results-list">
-            <div
-              v-for="(attraction, index) in searchResults"
-              :key="attraction.no"
-              class="search-result-item"
-              :class="{ selected: selectedAttractions.some((s) => s.no === attraction.no) }"
-              @click="selectSearchResult(attraction)"
-            >
-              <img :src="attraction.firstImage1 || '/img/no-image.jpg'" :alt="attraction.title" class="result-thumb" />
-              <div class="result-info">
-                <h6 class="result-title">{{ attraction.title }}</h6>
-                <p class="result-location">
-                  <i class="fas fa-map-marker-alt text-danger me-1"></i>
-                  {{ attraction.sido }} {{ attraction.gugun }}
-                </p>
-                <div class="result-category" v-if="attraction.contentTypeName">
-                  {{ attraction.contentTypeName }}
-                </div>
-              </div>
-              <div class="result-actions">
-                <button
-                  v-if="!selectedAttractions.some((s) => s.no === attraction.no)"
-                  class="btn btn-sm btn-primary add-btn"
-                  @click.stop="addAttractionToSelection(attraction)"
-                >
-                  <i class="fas fa-plus"></i>
-                </button>
-                <button v-else class="btn btn-sm btn-success added-btn" disabled>
-                  <i class="fas fa-check"></i>
-                </button>
-              </div>
+    <div class="search-results-content" :class="{ collapsed: searchResultsCollapsed }">
+      <div class="search-results-list">
+        <div
+          v-for="(attraction, index) in attractions"
+          :key="attraction.no"
+          class="search-result-item"
+          :class="{ selected: selectedAttractions.some((s) => s.no === attraction.no) }"
+          @click="selectSearchResult(attraction)"
+        >
+          <img :src="attraction.firstImage1 || '/img/no-image.jpg'" :alt="attraction.title" class="result-thumb" />
+          <div class="result-info">
+            <h6 class="result-title">{{ attraction.title }}</h6>
+            <p class="result-location">
+              <i class="fas fa-map-marker-alt text-danger me-1"></i>
+              {{ attraction.sido }} {{ attraction.gugun }}
+            </p>
+            <div class="result-category" v-if="attraction.contentTypeName">
+              {{ attraction.contentTypeName }}
             </div>
           </div>
-
-          <!-- 검색 결과 페이지네이션 -->
-          <div v-if="searchTotalPages > 1" class="search-pagination">
+          <div class="result-actions">
             <button
-              class="page-btn"
-              :disabled="searchCurrentPage === 1"
-              @click="changeSearchPage(searchCurrentPage - 1)"
+              v-if="!selectedAttractions.some((s) => s.no === attraction.no)"
+              class="btn btn-sm btn-primary add-btn"
+              @click.stop="addAttractionToSelection(attraction)"
             >
-              <i class="fas fa-chevron-left"></i>
+              <i class="fas fa-plus"></i>
             </button>
-
-            <span class="page-info"> {{ searchCurrentPage }} / {{ searchTotalPages }} </span>
-
-            <button
-              class="page-btn"
-              :disabled="searchCurrentPage === searchTotalPages"
-              @click="changeSearchPage(searchCurrentPage + 1)"
-            >
-              <i class="fas fa-chevron-right"></i>
+            <button v-else class="btn btn-sm btn-success added-btn" disabled>
+              <i class="fas fa-check"></i>
             </button>
           </div>
         </div>
       </div>
+<!-- 검색 결과 페이지네이션 -->
+<div v-if="searchTotalPages > 1" class="search-pagination">
+  <button
+    class="page-btn"
+    :disabled="searchCurrentPage === 1 || searchLoading"
+    @click="changeSearchPage(searchCurrentPage - 1)"
+  >
+    <i class="fas fa-chevron-left"></i>
+  </button>
+
+  <span class="page-info"> {{ searchCurrentPage }} / {{ searchTotalPages }} </span>
+
+  <button
+    class="page-btn"
+    :disabled="searchCurrentPage === searchTotalPages || searchLoading"
+    @click="changeSearchPage(searchCurrentPage + 1)"
+  >
+    <i class="fas fa-chevron-right"></i>
+  </button>
+</div>
+
+    </div>
+  </div>
 
       <!-- 지도 컨트롤 버튼들 -->
       <div class="map-controls">
@@ -646,15 +646,37 @@ const attractionDetail = ref(null);
 const loadingLocation = ref(false);
 const loadingPopular = ref(false);
 
+// 상태 관리
+
+const attractions = ref([]);
+const loading = ref(false);
+
+const currentPage = ref(1);
+const itemsPerPage = ref(20);
+const totalCount = ref(0);
+
+
+
 // 검색 결과 관련 상태
 const searchResults = ref([]);
 const searchCurrentPage = ref(1);
-const searchTotalPages = ref(0);
+const searchTotalPages = computed(() => totalCount.value ? Math.ceil(totalCount.value / searchItemsPerPage.value) : 1);
+
+const totalPages = computed(() => Math.ceil(totalCount.value / itemsPerPage.value));
 const searchItemsPerPage = ref(10);
 const searchLoading = ref(false);
-const searchResultsCollapsed = ref(false); // 검색 결과 패널 접힘 상태
+const searchResultsCollapsed = ref(false); // 검색 결과 패널 접힘 상
 
-// 지도 설정
+
+
+// 지도 관련 상태
+
+const showRoadview = ref(false);
+const showRadiusSearch = ref(false); // 반경 검색 표시 여부 (토글)
+
+let infowindow = null;
+let roadviewClient = null;
+let roadview = null;
 const mapType = ref("ROADMAP");
 const showTraffic = ref(false);
 
@@ -919,77 +941,60 @@ const loadRandomAttractions = async () => {
 const searchAttractions = async () => {
   try {
     searchLoading.value = true;
-    searchCurrentPage.value = 1; // 새 검색 시 첫 페이지로
 
-    const params = {
-      areaCode: searchArea.value,
-      siGunGuCode: searchGugun.value,
-      contentTypeName: searchContentType.value,
-      keyword: searchKeyword.value,
-      offset: 0,
-      limit: searchItemsPerPage.value,
-    };
-
-    // 검색 결과와 전체 개수를 위한 별도 요청
-    const [searchResponse, countResponse] = await Promise.all([
-      attractionAPI.getAttractions(params),
-      attractionAPI.getAttractions({ ...params, limit: 1000 }), // 전체 개수 조회용
-    ]);
-
-    const attractions = searchResponse.data;
-    searchResults.value = attractions;
-    searchTotalPages.value = Math.ceil(countResponse.data.length / searchItemsPerPage.value);
-
-    // 지도에 마커 표시
-    updateMapMarkers(attractions);
-
-    // 지도 범위 조정
-    if (attractions.length > 0) {
-      const bounds = new window.kakao.maps.LatLngBounds();
-      attractions.forEach((attraction) => {
-        if (attraction.latitude && attraction.longitude) {
-          bounds.extend(new window.kakao.maps.LatLng(attraction.latitude, attraction.longitude));
-        }
-      });
-      map.setBounds(bounds);
+    if (!searchKeyword.value && !searchArea.value && !searchContentType.value) {
+      alert("검색 조건을 입력해주세요.");
+      searchLoading.value = false;
+      return;
     }
-  } catch (error) {
-    console.error("관광지 검색 오류:", error);
-    searchResults.value = [];
-    searchTotalPages.value = 0;
-  } finally {
-    searchLoading.value = false;
-  }
-};
 
-const changeSearchPage = async (page) => {
-  if (page < 1 || page > searchTotalPages.value || searchLoading.value) return;
+    const offset = (searchCurrentPage.value - 1) * searchItemsPerPage.value;
 
-  try {
-    searchLoading.value = true;
-    searchCurrentPage.value = page;
-
-    const offset = (page - 1) * searchItemsPerPage.value;
     const params = {
+      keyword: searchKeyword.value.trim(),
       areaCode: searchArea.value,
       siGunGuCode: searchGugun.value,
       contentTypeName: searchContentType.value,
-      keyword: searchKeyword.value,
       offset: offset,
       limit: searchItemsPerPage.value,
     };
 
-    const response = await attractionAPI.getAttractions(params);
-    searchResults.value = response.data;
+    const response = await attractionAPI.searchAttractions(params);
 
-    // 지도에 새 결과 표시
-    updateMapMarkers(response.data);
+    if (response.data.attractions) {
+      attractions.value = response.data.attractions;
+      totalCount.value = response.data.totalCount || 0;
+    } else {
+      attractions.value = response.data;
+      totalCount.value = response.data.length;
+    }
+
+    updateMapMarkers();
   } catch (error) {
-    console.error("검색 페이지 변경 오류:", error);
+    console.error("관광지 검색 중 오류 발생:", error);
+    if (error.response?.status === 404) {
+      attractions.value = [];
+      totalCount.value = 0;
+    } else {
+      alert("검색 중 오류가 발생했습니다.");
+    }
   } finally {
     searchLoading.value = false;
   }
 };
+
+
+const changeSearchPage = async (page) => {
+  if (page < 1 || page > searchTotalPages.value || searchLoading.value) return;
+
+  searchCurrentPage.value = page;
+  await searchAttractions();
+};
+// 검색 조건 바뀌면 1페이지부터 재검색
+watch([searchKeyword, searchArea, searchGugun, searchContentType], () => {
+  searchCurrentPage.value = 1;
+  searchAttractions();
+});
 
 const selectSearchResult = (attraction) => {
   // 지도 중심 이동 및 상세 정보 표시
@@ -1042,63 +1047,45 @@ const searchNearbyAttractions = async (lat, lng) => {
   }
 };
 
-const updateMapMarkers = (attractions) => {
+const updateMapMarkers = () => {
   if (!map) return;
 
   // 기존 마커 정리
-  markers.forEach((markerData) => {
-    markerData.marker.setMap(null);
-    if (markerData.infoWindow) {
-      markerData.infoWindow.close();
-    }
-  });
+  markers.forEach((marker) => marker.setMap(null));
   markers = [];
 
-  if (!attractions || attractions.length === 0) return;
+  if (infowindow) {
+    infowindow.close();
+  }
 
-  attractions.forEach((attraction) => {
+  if (attractions.value.length === 0) return;
+
+  const bounds = new kakao.maps.LatLngBounds();
+
+  attractions.value.forEach((attraction) => {
     if (!attraction.latitude || !attraction.longitude) return;
 
-    const position = new window.kakao.maps.LatLng(attraction.latitude, attraction.longitude);
+    const position = new kakao.maps.LatLng(attraction.latitude, attraction.longitude);
 
-    // 선택된 관광지인지 확인
-    const isSelected = selectedAttractions.value.some((selected) => selected.no === attraction.no);
-
-    // 마커 이미지 설정
-    const imageSrc = isSelected
-      ? "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png"
-      : "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png";
-    const imageSize = new window.kakao.maps.Size(24, 35);
-    const markerImage = new window.kakao.maps.MarkerImage(imageSrc, imageSize);
-
-    const marker = new window.kakao.maps.Marker({
+    const marker = new kakao.maps.Marker({
       position: position,
-      image: markerImage,
       map: map,
     });
 
-    // 인포윈도우 생성
-    const infoWindow = new window.kakao.maps.InfoWindow({
-      content: `
-        <div style="padding:10px; font-size:12px; width:200px; text-align:center;">
-          <strong>${attraction.title}</strong><br>
-          <span style="color:#666;">${attraction.sido} ${attraction.gugun}</span><br>
-          <button onclick="window.selectAttractionFromMap(${attraction.no})" 
-                  style="margin-top:5px; padding:3px 8px; background:#007bff; color:white; border:none; border-radius:3px; cursor:pointer;">
-            상세보기
-          </button>
-        </div>
-      `,
-    });
-
     // 마커 클릭 이벤트
-    window.kakao.maps.event.addListener(marker, "click", function () {
-      infoWindow.open(map, marker);
+    kakao.maps.event.addListener(marker, "click", () => {
+      selectAttraction(attraction);
     });
 
-    markers.push({ marker, attraction, infoWindow });
+    markers.push(marker);
+    bounds.extend(position);
   });
+
+  if (markers.length > 0) {
+    map.setBounds(bounds);
+  }
 };
+
 
 // 전역 함수로 등록 (인포윈도우에서 호출)
 window.selectAttractionFromMap = (attractionNo) => {

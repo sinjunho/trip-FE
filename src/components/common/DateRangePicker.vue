@@ -392,12 +392,12 @@ watch([startDate, endDate], ([newStart, newEnd]) => {
 .picker-header {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 24px;
+  padding: 14px;
   text-align: center;
 }
 
 .picker-header h3 {
-  margin: 0 0 16px 0;
+  margin: 0 0 12px 0;
   font-size: 20px;
   font-weight: 600;
 }
