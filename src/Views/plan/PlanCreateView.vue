@@ -31,21 +31,21 @@
             <h2 class="mb-0">📝 여행 기본 정보를 입력해주세요</h2>
             <p class="text-muted mb-0">여행의 기본 정보를 설정해보세요</p>
           </div>
-          <div class="card-body" style="display: flex;">
+          <div class="card-body" style="display: flex">
             <div class="col-md-8">
-                  <div class="mb-4">
-                    <label class="form-label"><i class="fas fa-calendar-alt me-2"></i>여행 기간</label>
-                    <DateRangePicker
-                      :start-date="plan.startDate"
-                      :end-date="plan.endDate"
-                      @update:start-date="plan.startDate = $event"
-                      @update:end-date="plan.endDate = $event"
-                      @dates-changed="onDatesChanged"
-                    />
-                  </div>
-                </div>
+              <div class="mb-4">
+                <label class="form-label"><i class="fas fa-calendar-alt me-2"></i>여행 기간</label>
+                <DateRangePicker
+                  :start-date="plan.startDate"
+                  :end-date="plan.endDate"
+                  @update:start-date="plan.startDate = $event"
+                  @update:end-date="plan.endDate = $event"
+                  @dates-changed="handleDatesChanged"
+                />
+              </div>
+            </div>
             <form @submit.prevent="nextStep">
-              <div class="row" style="display: flex; width: 950px; margin-top: 3.4%;" >
+              <div class="row" style="display: flex; width: 950px; margin-top: 3.4%">
                 <div class="col-md-4">
                   <div class="travel-tips">
                     <h5><i class="fas fa-lightbulb text-warning me-2"></i>여행 계획 팁</h5>
@@ -57,7 +57,7 @@
                     </ul>
                   </div>
                   <br />
-                  <div class="mb-4" style="margin-top: 100px;">
+                  <div class="mb-4" style="margin-top: 100px">
                     <label for="title" class="form-label"> <i class="fas fa-plane me-2"></i>여행 제목 </label>
                     <input
                       type="text"
@@ -84,7 +84,7 @@
                 </div>
               </div>
 
-              <div class="d-flex justify-content-between mt-4" style="width: 300px; ">
+              <div class="d-flex justify-content-between mt-4" style="width: 300px">
                 <router-link to="/plans" class="btn btn-outline-secondary">
                   <i class="fas fa-arrow-left me-2"></i>취소
                 </router-link>
@@ -118,86 +118,142 @@
         </button>
       </div>
 
-      
-  <!-- 검색 결과 네비게이션 패널 -->
-  <div class="search-results-nav" :class="{ show: attractions.length > 0, collapsed: searchResultsCollapsed }">
-    <div class="search-results-header" @click="toggleSearchResults">
-      <div class="header-content">
-        <h5>
-          <i class="fas fa-search me-2"></i>
-          검색 결과 ({{ totalCount }}개)
-        </h5>
-        <div class="header-actions">
-          <button class="toggle-search-results" :class="{ collapsed: searchResultsCollapsed }">
-            <i class="fas fa-chevron-up"></i>
-          </button>
-          <button class="close-search-results" @click.stop="clearSearchResults">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      </div>
-    </div>
+      <!-- 검색 결과 네비게이션 패널 -->
+      <div class="search-results-nav" :class="{ show: attractions.length > 0, collapsed: searchResultsCollapsed }">
+        <div class="search-results-header" @click="toggleSearchResults">
+          <div class="header-content">
+            <h5>
+              <i class="fas fa-search me-2"></i>
+              검색 결과
+              <!-- 검색 조건 표시 -->
+              <span v-if="getSearchSummary()" class="search-context">
+                {{ getSearchSummary() }}
+              </span>
+              <span class="result-count-badge">({{ totalCount.toLocaleString() }}개)</span>
+            </h5>
+            <div class="header-actions">
+              <!-- 검색 조건 초기화 버튼 -->
+              <button
+                class="clear-search-btn"
+                @click.stop="clearSearchConditions"
+                v-if="searchKeyword || searchContentType || searchArea"
+                title="검색 조건 초기화"
+              >
+                <i class="fas fa-undo"></i>
+                <span>초기화</span>
+              </button>
 
-    <div class="search-results-content" :class="{ collapsed: searchResultsCollapsed }">
-      <div class="search-results-list">
-        <div
-          v-for="(attraction, index) in attractions"
-          :key="attraction.no"
-          class="search-result-item"
-          :class="{ selected: selectedAttractions.some((s) => s.no === attraction.no) }"
-          @click="selectSearchResult(attraction)"
-        >
-          <img :src="attraction.firstImage1 || '/img/no-image.jpg'" :alt="attraction.title" class="result-thumb" />
-          <div class="result-info">
-            <h6 class="result-title">{{ attraction.title }}</h6>
-            <p class="result-location">
-              <i class="fas fa-map-marker-alt text-danger me-1"></i>
-              {{ attraction.sido }} {{ attraction.gugun }}
-            </p>
-            <div class="result-category" v-if="attraction.contentTypeName">
-              {{ attraction.contentTypeName }}
+              <!-- 새로고침 버튼 -->
+              <button
+                class="refresh-search-btn"
+                @click.stop="searchAttractions"
+                :disabled="searchLoading"
+                title="검색 새로고침"
+              >
+                <i class="fas fa-sync" :class="{ 'fa-spin': searchLoading }"></i>
+              </button>
+
+              <!-- 패널 접기/펼치기 버튼 -->
+              <button class="toggle-search-results" :class="{ collapsed: searchResultsCollapsed }">
+                <i class="fas fa-chevron-up"></i>
+              </button>
+
+              <!-- 검색 결과 닫기 버튼 -->
+              <button class="close-search-results" @click.stop="clearSearchResults">
+                <i class="fas fa-times"></i>
+              </button>
             </div>
           </div>
-          <div class="result-actions">
-            <button
-              v-if="!selectedAttractions.some((s) => s.no === attraction.no)"
-              class="btn btn-sm btn-primary add-btn"
-              @click.stop="addAttractionToSelection(attraction)"
+
+          <!-- 검색 상태 표시 -->
+          <div v-if="searchLoading" class="search-status">
+            <div class="search-loading">
+              <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+              검색 중...
+            </div>
+          </div>
+          <div
+            v-else-if="attractions.length === 0 && (searchKeyword || searchContentType || searchArea)"
+            class="search-status"
+          >
+            <div class="no-results-status text-warning">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              검색 결과가 없습니다. 다른 조건으로 시도해보세요.
+            </div>
+          </div>
+        </div>
+
+        <div class="search-results-content" :class="{ collapsed: searchResultsCollapsed }">
+          <div class="search-results-list">
+            <div
+              v-for="(attraction, index) in attractions"
+              :key="attraction.no"
+              class="search-result-item"
+              :class="{ selected: selectedAttractions.some((s) => s.no === attraction.no) }"
+              @click="selectSearchResult(attraction)"
             >
-              <i class="fas fa-plus"></i>
+              <img :src="attraction.firstImage1 || '/img/no-image.jpg'" :alt="attraction.title" class="result-thumb" />
+
+              <div class="result-info">
+                <h6 class="result-title">{{ attraction.title }}</h6>
+                <p class="result-location">
+                  <i class="fas fa-map-marker-alt text-danger me-1"></i>
+                  {{ attraction.sido }} {{ attraction.gugun }}
+                </p>
+                <div class="result-details">
+                  <!-- 카테고리 표시 -->
+                  <div v-if="attraction.contentTypeName" class="result-category">
+                    <i :class="getCategoryIcon(attraction.contentTypeName)" class="me-1"></i>
+                    {{ attraction.contentTypeName }}
+                  </div>
+                  <!-- 조회수 표시 -->
+                  <div v-if="attraction.viewCnt" class="result-views">
+                    <i class="fas fa-eye me-1"></i>
+                    {{ attraction.viewCnt.toLocaleString() }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="result-actions">
+                <button
+                  v-if="!selectedAttractions.some((s) => s.no === attraction.no)"
+                  class="btn btn-sm btn-primary add-btn"
+                  @click.stop="addAttractionToSelection(attraction)"
+                  title="여행지 추가"
+                >
+                  <i class="fas fa-plus"></i>
+                </button>
+                <button v-else class="btn btn-sm btn-success added-btn" disabled title="이미 추가됨">
+                  <i class="fas fa-check"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- 검색 결과 페이지네이션 -->
+          <div v-if="searchTotalPages > 1" class="search-pagination">
+            <button
+              class="page-btn"
+              :disabled="searchCurrentPage === 1 || searchLoading"
+              @click="changeSearchPage(searchCurrentPage - 1)"
+            >
+              <i class="fas fa-chevron-left"></i>
             </button>
-            <button v-else class="btn btn-sm btn-success added-btn" disabled>
-              <i class="fas fa-check"></i>
+
+            <span class="page-info"> {{ searchCurrentPage }} / {{ searchTotalPages }} </span>
+
+            <button
+              class="page-btn"
+              :disabled="searchCurrentPage === searchTotalPages || searchLoading"
+              @click="changeSearchPage(searchCurrentPage + 1)"
+            >
+              <i class="fas fa-chevron-right"></i>
             </button>
           </div>
         </div>
       </div>
-<!-- 검색 결과 페이지네이션 -->
-<div v-if="searchTotalPages > 1" class="search-pagination">
-  <button
-    class="page-btn"
-    :disabled="searchCurrentPage === 1 || searchLoading"
-    @click="changeSearchPage(searchCurrentPage - 1)"
-  >
-    <i class="fas fa-chevron-left"></i>
-  </button>
-
-  <span class="page-info"> {{ searchCurrentPage }} / {{ searchTotalPages }} </span>
-
-  <button
-    class="page-btn"
-    :disabled="searchCurrentPage === searchTotalPages || searchLoading"
-    @click="changeSearchPage(searchCurrentPage + 1)"
-  >
-    <i class="fas fa-chevron-right"></i>
-  </button>
-</div>
-
-    </div>
-  </div>
 
       <!-- 지도 컨트롤 버튼들 -->
-      <div class="map-controls">
+      <div class="map-controls" style="display: flex">
         <button class="control-btn" @click="changeMapType" :title="mapTypeTitle">
           <i :class="mapTypeIcon"></i>
         </button>
@@ -230,7 +286,7 @@
             </button>
           </div>
 
-          <!-- 키워드 검색 -->
+          <!-- 키워드 검색 섹션 개선 -->
           <div class="search-section priority">
             <label class="search-label">
               <i class="fas fa-search"></i>
@@ -241,34 +297,55 @@
                 type="text"
                 v-model="searchKeyword"
                 class="search-input"
-                placeholder="관광지 이름을 입력하세요"
+                placeholder="예: 전주, 전주 맛집, 부산 해변..."
                 @keyup.enter="searchAttractions"
+                @input="handleSearchInputChange"
               />
-              <button class="search-btn" @click="searchAttractions">
-                <i class="fas fa-search"></i>
+              <button class="search-btn" @click="searchAttractions" :disabled="searchLoading">
+                <i v-if="!searchLoading" class="fas fa-search"></i>
+                <i v-else class="fas fa-spinner fa-spin"></i>
               </button>
+            </div>
+            <!-- 검색 팁 개선 -->
+            <div class="search-tip">
+              <small class="text-muted">
+                <i class="fas fa-lightbulb me-1 text-warning"></i>
+                <strong>검색 팁:</strong>
+                "전주 맛집", "부산 해변", "제주 관광지" 처럼 지역과 키워드를 함께 입력하거나, 아래 카테고리를 선택하면
+                더 정확한 검색이 가능합니다
+              </small>
             </div>
           </div>
 
-          <!-- 카테고리 선택 -->
+          <!-- 카테고리 선택 섹션 개선 -->
           <div class="search-section">
             <label class="search-label">
               <i class="fas fa-tags"></i>
               카테고리
+              <span class="optional-label">(선택사항)</span>
             </label>
-            <select v-model="searchContentType" class="search-select">
+            <select v-model="searchContentType" class="search-select" @change="searchAttractions">
               <option value="">전체 카테고리</option>
               <option v-for="type in contentTypes" :key="type.content_type_id" :value="type.content_type_id">
                 {{ type.content_type_name }}
               </option>
             </select>
+            <!-- 선택된 카테고리 및 설명 표시 -->
+            <div v-if="searchContentType" class="selected-category">
+              <div class="badge bg-primary mb-2">
+                <i :class="getCategoryIcon(getContentTypeName(searchContentType))" class="me-1"></i>
+                {{ getContentTypeName(searchContentType) }} 선택됨
+              </div>
+              <small class="text-muted d-block"> 선택한 카테고리로 검색 결과가 필터링됩니다 </small>
+            </div>
           </div>
 
-          <!-- 지역 선택 -->
+          <!-- 지역 선택 섹션 -->
           <div class="search-section">
             <label class="search-label">
               <i class="fas fa-map-marker-alt"></i>
               지역 선택
+              <span class="optional-label">(키워드에서 자동 인식됨)</span>
             </label>
             <select v-model="searchArea" class="search-select" @change="onAreaChange">
               <option value="">전체 지역</option>
@@ -276,6 +353,12 @@
                 {{ area.sido_name }}
               </option>
             </select>
+            <div class="search-help-text">
+              <small class="text-muted">
+                <i class="fas fa-info-circle me-1"></i>
+                키워드에서 지역이 자동으로 인식되지 않을 때 직접 선택하세요
+              </small>
+            </div>
           </div>
 
           <!-- 시군구 선택 -->
@@ -301,7 +384,7 @@
             <div v-if="loadingPopular" class="text-center py-3">
               <div class="spinner-border spinner-border-sm text-primary"></div>
             </div>
-            <div v-else class="popular-list">
+            <div class="popular-list">
               <div
                 v-for="attraction in popularAttractions.slice(0, 5)"
                 :key="attraction.no"
@@ -314,7 +397,8 @@
                   class="popular-thumb"
                 />
                 <div class="popular-info">
-                  <h6 class="mb-1">{{ attraction.title }}</h6>
+                  <!-- 인기 관광지도 지역명 포함 -->
+                  <h6 class="mb-1">{{ getFormattedTitle(attraction) }}</h6>
                   <p class="mb-0 text-muted small">{{ attraction.sido }}</p>
                 </div>
                 <button class="btn btn-sm btn-outline-primary">
@@ -364,8 +448,14 @@
         <div class="detail-card-header">
           <h4>{{ attractionDetail.title }}</h4>
           <div class="detail-actions-header">
-            <button class="action-btn" @click="addAttractionToSelection(attractionDetail)" title="여행지 추가">
-              <i class="fas fa-plus"></i>
+            <button
+              class="btn btn-sm btn-primary add-btn"
+              @click="addAttractionToSelection(attractionDetail)"
+              title="여행지 추가"
+              :disabled="selectedAttractions.some((s) => s.no === attractionDetail.no)"
+            >
+              <i v-if="!selectedAttractions.some((s) => s.no === attractionDetail.no)" class="fas fa-plus"></i>
+              <i v-else class="fas fa-check"></i>
             </button>
             <button class="close-detail" @click="closeDetail">
               <i class="fas fa-times"></i>
@@ -398,7 +488,16 @@
           </div>
 
           <div class="detail-actions">
-            <button class="detail-btn primary" @click="addAttractionToSelection(attractionDetail)">여행지 추가</button>
+            <button
+              class="detail-btn"
+              :class="selectedAttractions.some((s) => s.no === attractionDetail.no) ? 'added' : 'primary'"
+              @click="addAttractionToSelection(attractionDetail)"
+              :disabled="selectedAttractions.some((s) => s.no === attractionDetail.no)"
+            >
+              <i v-if="!selectedAttractions.some((s) => s.no === attractionDetail.no)" class="fas fa-plus me-1"></i>
+              <i v-else class="fas fa-check me-1"></i>
+              {{ selectedAttractions.some((s) => s.no === attractionDetail.no) ? "추가됨" : "여행지 추가" }}
+            </button>
           </div>
         </div>
       </div>
@@ -655,19 +754,17 @@ const currentPage = ref(1);
 const itemsPerPage = ref(20);
 const totalCount = ref(0);
 
-
-
 // 검색 결과 관련 상태
 const searchResults = ref([]);
 const searchCurrentPage = ref(1);
-const searchTotalPages = computed(() => totalCount.value ? Math.ceil(totalCount.value / searchItemsPerPage.value) : 1);
+const searchTotalPages = computed(() =>
+  totalCount.value ? Math.ceil(totalCount.value / searchItemsPerPage.value) : 1
+);
 
 const totalPages = computed(() => Math.ceil(totalCount.value / itemsPerPage.value));
 const searchItemsPerPage = ref(10);
 const searchLoading = ref(false);
 const searchResultsCollapsed = ref(false); // 검색 결과 패널 접힘 상
-
-
 
 // 지도 관련 상태
 
@@ -719,6 +816,31 @@ const isStep1Valid = computed(() => {
 const unassignedAttractions = computed(() => {
   return selectedAttractions.value.filter((attr) => !attr.assignedDay);
 });
+
+// 기존 메서드들에 추가
+const getFormattedTitle = (attraction) => {
+  if (!attraction) return "";
+
+  const title = attraction.title || "";
+  const sido = attraction.sido || "";
+  const gugun = attraction.gugun || "";
+
+  // 제목에 이미 지역명이 포함되어 있는지 확인
+  const hasLocation = title.includes(sido) || title.includes(gugun);
+
+  if (hasLocation) {
+    return title;
+  }
+
+  // 지역명이 없으면 추가
+  if (sido && gugun && sido !== gugun) {
+    return `${title} (${sido} ${gugun})`;
+  } else if (sido) {
+    return `${title} (${sido})`;
+  }
+
+  return title;
+};
 
 const mapTypeTitle = computed(() => {
   switch (mapType.value) {
@@ -942,72 +1064,304 @@ const searchAttractions = async () => {
   try {
     searchLoading.value = true;
 
+    // 검색 조건이 하나도 없으면 기본 관광지를 로드
     if (!searchKeyword.value && !searchArea.value && !searchContentType.value) {
-      alert("검색 조건을 입력해주세요.");
+      await loadRandomAttractions();
       searchLoading.value = false;
       return;
+    }
+
+    // 검색어에서 지역과 키워드 분리
+    let parsedKeyword = searchKeyword.value.trim();
+    let parsedAreaCode = searchArea.value; // 기본적으로 선택된 지역 코드 사용
+
+    // 키워드에서 지역명 파싱 (예: "전주 맛집" -> 지역: "전북특별자치도", 키워드: "맛집")
+    if (searchKeyword.value && !searchArea.value) {
+      const parseResult = parseSearchKeyword(searchKeyword.value.trim());
+      if (parseResult.areaCode) {
+        parsedAreaCode = parseResult.areaCode;
+        parsedKeyword = parseResult.keyword;
+      }
     }
 
     const offset = (searchCurrentPage.value - 1) * searchItemsPerPage.value;
 
     const params = {
-      keyword: searchKeyword.value.trim(),
-      areaCode: searchArea.value,
+      keyword: parsedKeyword,
+      areaCode: parsedAreaCode,
       siGunGuCode: searchGugun.value,
       contentTypeName: searchContentType.value,
       offset: offset,
       limit: searchItemsPerPage.value,
     };
 
+    console.log("검색 파라미터:", params);
+
+    // API 호출
     const response = await attractionAPI.searchAttractions(params);
 
+    console.log("검색 응답:", response.data);
+
+    // 응답 데이터 처리
     if (response.data.attractions) {
       attractions.value = response.data.attractions;
       totalCount.value = response.data.totalCount || 0;
-    } else {
+    } else if (Array.isArray(response.data)) {
       attractions.value = response.data;
       totalCount.value = response.data.length;
-    }
-
-    updateMapMarkers();
-  } catch (error) {
-    console.error("관광지 검색 중 오류 발생:", error);
-    if (error.response?.status === 404) {
+    } else {
       attractions.value = [];
       totalCount.value = 0;
+    }
+
+    // 검색 결과 처리
+    if (attractions.value.length === 0) {
+      console.log("검색 결과 없음");
+      // 사용자에게 검색 결과 없음을 알리는 메시지 (선택사항)
+      if (parsedKeyword && searchContentType.value) {
+        const categoryName = getContentTypeName(searchContentType.value);
+        console.log(`"${parsedKeyword}" 키워드의 "${categoryName}" 카테고리에서 검색 결과가 없습니다.`);
+      }
     } else {
-      alert("검색 중 오류가 발생했습니다.");
+      // 검색 성공 시 지도에 마커 표시
+      updateMapMarkers();
+
+      // 검색 결과 패널 표시
+      searchResultsCollapsed.value = false;
+
+      console.log(`검색 완료: ${attractions.value.length}개 결과`);
+    }
+  } catch (error) {
+    console.error("관광지 검색 중 오류 발생:", error);
+    attractions.value = [];
+    totalCount.value = 0;
+
+    // 에러 메시지 표시 (선택사항)
+    if (error.response?.status === 404) {
+      console.log("해당 조건으로 검색된 결과가 없습니다.");
+    } else {
+      console.log("검색 중 오류가 발생했습니다.");
     }
   } finally {
     searchLoading.value = false;
   }
 };
 
+// 검색어 파싱 함수 - 지역코드와 매칭하도록 수정
+const parseSearchKeyword = (keyword) => {
+  // 지역명을 지역코드로 매핑
+  const areaMapping = {
+    // 특별시/광역시
+    서울: "1",
+    서울특별시: "1",
+    서울시: "1",
+    인천: "2",
+    인천광역시: "2",
+    인천시: "2",
+    대전: "3",
+    대전광역시: "3",
+    대전시: "3",
+    대구: "4",
+    대구광역시: "4",
+    대구시: "4",
+    광주: "5",
+    광주광역시: "5",
+    광주시: "5",
+    부산: "6",
+    부산광역시: "6",
+    부산시: "6",
+    울산: "7",
+    울산광역시: "7",
+    울산시: "7",
+    세종: "8",
+    세종특별자치시: "8",
+    세종시: "8",
 
+    // 도 단위
+    경기: "31",
+    경기도: "31",
+    강원: "32",
+    강원도: "32",
+    강원특별자치도: "32",
+    충북: "33",
+    충청북도: "33",
+    충남: "34",
+    충청남도: "34",
+    경북: "35",
+    경상북도: "35",
+    경남: "36",
+    경상남도: "36",
+    전북: "37",
+    전라북도: "37",
+    전북특별자치도: "37",
+    전남: "38",
+    전라남도: "38",
+    제주: "39",
+    제주특별자치도: "39",
+    제주도: "39",
+
+    // 주요 도시명 추가
+    전주: "37", // 전북
+    여수: "38", // 전남
+    순천: "38", // 전남
+    목포: "38", // 전남
+    포항: "35", // 경북
+    경주: "35", // 경북
+    안동: "35", // 경북
+    창원: "36", // 경남
+    김해: "36", // 경남
+    진주: "36", // 경남
+    춘천: "32", // 강원
+    원주: "32", // 강원
+    강릉: "32", // 강원
+    속초: "32", // 강원
+    청주: "33", // 충북
+    충주: "33", // 충북
+    천안: "34", // 충남
+    공주: "34", // 충남
+    부여: "34", // 충남
+    수원: "31", // 경기
+    성남: "31", // 경기
+    고양: "31", // 경기
+    용인: "31", // 경기
+    파주: "31", // 경기
+    여주: "31", // 경기
+    가평: "31", // 경기
+    양평: "31", // 경기
+  };
+
+  // 긴 지역명부터 먼저 체크 (예: "경상북도"를 "경북"보다 먼저)
+  const sortedAreas = Object.keys(areaMapping).sort((a, b) => b.length - a.length);
+
+  for (const area of sortedAreas) {
+    if (keyword.includes(area)) {
+      const remainingKeyword = keyword.replace(area, "").trim();
+
+      return {
+        area: area,
+        areaCode: areaMapping[area],
+        keyword: remainingKeyword,
+      };
+    }
+  }
+
+  return {
+    area: null,
+    areaCode: null,
+    keyword: keyword,
+  };
+};
+
+// 카테고리 이름을 가져오는 헬퍼 함수
+const getContentTypeName = (contentTypeId) => {
+  const contentType = contentTypes.value.find((type) => type.content_type_id === contentTypeId);
+  return contentType ? contentType.content_type_name : "선택된 카테고리";
+};
+
+// 페이지 변경 시 검색 재실행
 const changeSearchPage = async (page) => {
   if (page < 1 || page > searchTotalPages.value || searchLoading.value) return;
 
   searchCurrentPage.value = page;
   await searchAttractions();
 };
-// 검색 조건 바뀌면 1페이지부터 재검색
-watch([searchKeyword, searchArea, searchGugun, searchContentType], () => {
-  searchCurrentPage.value = 1;
-  searchAttractions();
+
+// 검색 조건 변경 감지
+watch([searchKeyword, searchContentType, searchArea, searchGugun], () => {
+  searchCurrentPage.value = 1; // 페이지 초기화
+
+  // 자동 검색 (디바운싱 적용)
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+  }
+
+  searchTimeout = setTimeout(() => {
+    if (searchKeyword.value.trim() || searchContentType.value || searchArea.value) {
+      searchAttractions();
+    }
+  }, 500); // 500ms 딜레이
 });
+
+// 검색 조건 초기화 함수
+const clearSearchConditions = () => {
+  searchKeyword.value = "";
+  searchContentType.value = "";
+  searchArea.value = "";
+  searchGugun.value = "";
+  searchCurrentPage.value = 1;
+
+  // 기본 관광지 로드
+  loadRandomAttractions();
+};
+
+//지도
 
 const selectSearchResult = (attraction) => {
   // 지도 중심 이동 및 상세 정보 표시
   selectAttraction(attraction);
 };
 
-const clearSearchResults = () => {
-  searchResults.value = [];
-  searchCurrentPage.value = 1;
-  searchTotalPages.value = 0;
-  searchResultsCollapsed.value = false; // 패널 상태 초기화
+// 카테고리별 아이콘 반환 함수
+const getCategoryIcon = (contentTypeName) => {
+  const iconMap = {
+    관광지: "fas fa-mountain",
+    문화시설: "fas fa-building",
+    축제공연행사: "fas fa-calendar-alt",
+    여행코스: "fas fa-route",
+    레포츠: "fas fa-running",
+    숙박: "fas fa-bed",
+    쇼핑: "fas fa-shopping-bag",
+    음식점: "fas fa-utensils",
+  };
 
-  // 기본 관광지 다시 로드
+  return iconMap[contentTypeName] || "fas fa-map-marker-alt";
+};
+
+// 검색 입력 변화 처리 (디바운싱)
+const handleSearchInputChange = () => {
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+  }
+
+  searchTimeout = setTimeout(() => {
+    if (searchKeyword.value.trim() || searchContentType.value || searchArea.value) {
+      searchAttractions();
+    }
+  }, 800); // 입력 후 800ms 후 자동 검색
+};
+
+// 검색 결과 요약 표시
+const getSearchSummary = () => {
+  let summary = [];
+
+  if (searchKeyword.value.trim()) {
+    summary.push(`"${searchKeyword.value.trim()}"`);
+  }
+
+  if (searchContentType.value) {
+    const categoryName = getContentTypeName(searchContentType.value);
+    summary.push(`"${categoryName}"`);
+  }
+
+  if (searchArea.value) {
+    const areaName = areaList.value.find((area) => area.sido_code === searchArea.value)?.sido_name;
+    if (areaName) {
+      summary.push(`"${areaName}"`);
+    }
+  }
+
+  return summary.join(" × ");
+};
+
+let searchTimeout = null; // 디바운싱용 타이머
+// 검색 결과 초기화 함수
+const clearSearchResults = () => {
+  attractions.value = [];
+  totalCount.value = 0;
+  searchCurrentPage.value = 1;
+  searchResultsCollapsed.value = false;
+
+  // 기본 관광지 로드
   loadRandomAttractions();
 };
 
@@ -1085,7 +1439,6 @@ const updateMapMarkers = () => {
     map.setBounds(bounds);
   }
 };
-
 
 // 전역 함수로 등록 (인포윈도우에서 호출)
 window.selectAttractionFromMap = (attractionNo) => {
@@ -1403,7 +1756,7 @@ onMounted(() => {
   left: 0;
   width: 100vw;
   height: 100vh;
-  padding-top: 80px;
+  padding-top: 150px;
   padding-bottom: 80px; /* 하단 네비게이션 공간 확보 */
   box-sizing: border-box;
   overflow: hidden;
@@ -1814,13 +2167,14 @@ onMounted(() => {
   text-align: center;
 }
 
+/* 지도 컨트롤 버튼들 */
 .map-controls {
   position: fixed;
   top: 50%;
   transform: translateY(-50%);
-  right: 20px;
+  right: 10px;
   display: flex;
-  flex-direction: column;
+  flex-direction: column; /* 세로 배치 확실히 */
   gap: 8px;
   z-index: 1002;
 }
@@ -1833,6 +2187,13 @@ onMounted(() => {
   justify-content: center;
   font-size: 16px;
   color: #666;
+  position: static; /* relative에서 static으로 변경 */
+  background: white;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .control-btn:hover {
@@ -1850,7 +2211,7 @@ onMounted(() => {
   top: 65px;
   left: -420px;
   width: 420px;
-  height: calc(100vh - 65px);
+  height: 1130px;
   background: white;
   z-index: 1001;
   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.1);
@@ -2029,13 +2390,15 @@ onMounted(() => {
   align-items: center;
 }
 
+/* 지도 컨테이너 크기 조정 */
 .map-container {
   position: absolute;
   top: 0;
   left: 0;
-  width: 95%;
-  height: 95%;
+  width: 100%;
+  height: calc(100% - 150px); /* 상단 여백을 위해 높이 조정 */
   overflow: hidden;
+  margin-top: 200px; /* 상단 여백 추가 */
 }
 
 #kakao-map {
@@ -2082,6 +2445,7 @@ onMounted(() => {
   align-items: center;
 }
 
+/* 상세정보 카드의 액션 버튼 스타일 */
 .action-btn {
   background: none;
   border: 1px solid #ddd;
@@ -2091,6 +2455,19 @@ onMounted(() => {
   font-size: 14px;
   transition: all 0.3s;
   color: #666;
+}
+
+.action-btn:hover:not(:disabled) {
+  background: #0d6efd;
+  border-color: #0d6efd;
+  color: white;
+}
+
+.action-btn:disabled {
+  background: #28a745;
+  border-color: #28a745;
+  color: white;
+  cursor: not-allowed;
 }
 
 .action-btn:hover {
@@ -2142,7 +2519,7 @@ onMounted(() => {
 .detail-actions {
   margin-top: 16px;
 }
-
+/* 상세정보 하단 버튼 스타일 */
 .detail-btn {
   width: 100%;
   padding: 10px;
@@ -2154,6 +2531,9 @@ onMounted(() => {
   text-decoration: none;
   text-align: center;
   transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .detail-btn.primary {
@@ -2165,6 +2545,15 @@ onMounted(() => {
   background: #0056b3;
 }
 
+.detail-btn.added {
+  background: #28a745;
+  color: white;
+  cursor: not-allowed;
+}
+
+.detail-btn.added:hover {
+  background: #28a745;
+}
 /* Step 3 스타일 */
 .day-header {
   display: flex;
@@ -2276,6 +2665,301 @@ onMounted(() => {
   }
 }
 
+/* 검색 팁 스타일 개선 */
+.search-tip {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: linear-gradient(90deg, #fff3e0 0%, #f8f9fa 100%);
+  border-radius: 6px;
+  border-left: 4px solid #ff9800;
+}
+
+.search-tip strong {
+  color: #f57c00;
+}
+
+/* 선택사항 라벨 */
+.optional-label {
+  font-size: 0.75rem;
+  color: #6c757d;
+  font-weight: normal;
+  opacity: 0.8;
+}
+
+/* 선택된 카테고리 표시 개선 */
+.selected-category {
+  margin-top: 10px;
+  padding: 8px;
+  background: #e9f0ff;
+  border-radius: 6px;
+  border: 1px solid #cce0ff;
+}
+
+.selected-category .badge {
+  font-size: 0.8rem;
+  padding: 5px 10px;
+}
+
+/* 검색 도움말 텍스트 */
+.search-help-text {
+  margin-top: 6px;
+}
+
+/* 검색 결과 헤더 완전 개선 */
+.search-context {
+  font-size: 0.85rem;
+  color: #495057;
+  font-weight: 500;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+}
+
+.result-count-badge {
+  font-size: 0.8rem;
+  color: #0d6efd;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+/* 헤더 액션 버튼들 */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clear-search-btn,
+.refresh-search-btn {
+  background: none;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.clear-search-btn:hover {
+  background: #f8f9fa;
+  border-color: #dc3545;
+  color: #dc3545;
+}
+
+.refresh-search-btn:hover:not(:disabled) {
+  background: #f8f9fa;
+  border-color: #0d6efd;
+  color: #0d6efd;
+}
+
+.refresh-search-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 검색 상태 표시 */
+.search-status {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.search-loading {
+  color: #0d6efd;
+  display: flex;
+  align-items: center;
+}
+
+.no-results-status {
+  display: flex;
+  align-items: center;
+}
+
+/* 검색 결과 아이템 세부 정보 */
+.result-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.result-category {
+  font-size: 0.75rem;
+  color: #0d6efd;
+  background: #e9f0ff;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.result-views {
+  font-size: 0.75rem;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+}
+
+/* 빈 검색 결과 표시 완전 개선 */
+.no-search-results {
+  text-align: center;
+  padding: 40px 20px;
+  background: white;
+  margin: 10px;
+  border-radius: 12px;
+  border: 2px dashed #dee2e6;
+}
+
+.no-results-icon {
+  font-size: 3rem;
+  color: #dee2e6;
+  margin-bottom: 16px;
+}
+
+.no-search-results h6 {
+  color: #495057;
+  margin-bottom: 8px;
+}
+
+.search-suggestions {
+  margin: 20px 0;
+  text-align: left;
+  max-width: 300px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.suggestion-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+
+.suggestion-list li {
+  padding: 4px 0;
+  font-size: 0.9rem;
+  color: #6c757d;
+  position: relative;
+  padding-left: 16px;
+}
+
+.suggestion-list li:before {
+  content: "•";
+  color: #0d6efd;
+  position: absolute;
+  left: 0;
+  font-weight: bold;
+}
+
+/* 검색 버튼 로딩 상태 */
+.search-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.search-btn .fa-spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* 애니메이션 */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 검색 결과 전환 애니메이션 */
+.search-result-item {
+  transition: all 0.3s ease;
+}
+
+.search-result-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 선택된 아이템 강조 */
+.search-result-item.selected {
+  background: linear-gradient(135deg, #e9f0ff 0%, #f0f7ff 100%);
+  border-color: #0d6efd;
+  box-shadow: 0 2px 8px rgba(13, 110, 253, 0.2);
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .search-tip {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+
+  .search-context {
+    display: none; /* 모바일에서는 검색 조건 숨김 */
+  }
+
+  .header-actions {
+    gap: 4px;
+  }
+
+  .clear-search-btn,
+  .refresh-search-btn {
+    padding: 3px 6px;
+    font-size: 0.75rem;
+  }
+
+  .clear-search-btn span {
+    display: none; /* 모바일에서는 텍스트 숨김 */
+  }
+
+  .result-details {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .search-suggestions {
+    max-width: 100%;
+  }
+
+  .no-search-results {
+    padding: 30px 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .selected-category {
+    padding: 6px;
+  }
+
+  .selected-category .badge {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+
+  .result-category,
+  .result-views {
+    font-size: 0.7rem;
+  }
+
+  .no-results-icon {
+    font-size: 2.5rem;
+  }
+
+  .suggestion-list {
+    font-size: 0.85rem;
+  }
+}
+
 @media (max-width: 768px) {
   .map-selection-view {
     padding-top: 60px;
@@ -2341,8 +3025,9 @@ onMounted(() => {
 
   .search-panel-toggle {
     background: rgba(255, 255, 255, 0.7); /* 흰색, 70% 불투명 */
-    left: 10px;
-    top: 70px;
+    top: 160px; /* 기존 90px에서 160px로 조정 */
+    left: 20px;
+    /* 나머지 스타일은 그대로 유지 */
   }
 
   .steps-container {
@@ -2572,5 +3257,25 @@ onMounted(() => {
 
 .form-control:valid {
   border-color: #28a745;
+}
+
+/* 모바일 반응형에서도 조정 */
+@media (max-width: 768px) {
+  .map-controls {
+    right: 15px; /* 모바일에서는 15px */
+    top: 40%;
+  }
+
+  .control-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .map-controls {
+    right: 10px; /* 더 작은 화면에서는 10px */
+  }
 }
 </style>
