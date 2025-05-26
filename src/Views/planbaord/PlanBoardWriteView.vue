@@ -1,1343 +1,1597 @@
-<!-- src/views/PlanBoard/PlanBoardWriteView.vue -->
+<!-- src/views/planboard/PlanBoardWriteView.vue -->
 <template>
   <div class="planboard-write-view">
     <div class="container py-4">
-      <!-- 헤더 -->
-      <div class="page-header">
-        <h1 class="page-title">
-          <i class="fas fa-pen-fancy me-3"></i>
-          {{ isEdit ? "여행 계획 수정" : "여행 계획 공유하기" }}
+      <!-- 페이지 헤더 -->
+      <div class="page-header mb-4">
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb">
+           
+            <li class="breadcrumb-item active">{{ isEdit ? '여행기 수정' : '여행기 작성' }}</li>
+          </ol>
+        </nav>
+        <h1 class="h2">
+          <i class="fas fa-pen-alt me-2"></i>
+          {{ isEdit ? '여행기 수정' : '새 여행기 작성' }}
         </h1>
-        <p class="page-subtitle">
-          {{ isEdit ? "여행 계획을 수정해보세요" : "나만의 특별한 여행 계획을 다른 여행자들과 공유해보세요!" }}
-        </p>
+        <p class="text-muted">나만의 특별한 여행 경험을 다른 분들과 공유해보세요!</p>
       </div>
 
-      <!-- 진행 단계 표시 -->
-      <div class="progress-steps">
-        <div class="step" :class="{ active: currentStep === 1, completed: currentStep > 1 }">
-          <div class="step-number">1</div>
-          <div class="step-label">기본 정보</div>
-        </div>
-        <div class="step-line" :class="{ completed: currentStep > 1 }"></div>
-        <div class="step" :class="{ active: currentStep === 2, completed: currentStep > 2 }">
-          <div class="step-number">2</div>
-          <div class="step-label">여행 정보</div>
-        </div>
-        <div class="step-line" :class="{ completed: currentStep > 2 }"></div>
-        <div class="step" :class="{ active: currentStep === 3 }">
-          <div class="step-number">3</div>
-          <div class="step-label">내용 작성</div>
-        </div>
-      </div>
-
-      <!-- 폼 컨테이너 -->
-      <div class="form-container">
-        <form @submit.prevent="submitForm">
-          <!-- Step 1: 기본 정보 -->
-          <div v-if="currentStep === 1" class="form-step">
-            <div class="step-content">
-              <h3 class="step-title">
-                <i class="fas fa-info-circle me-2"></i>
-                기본 정보를 입력해주세요
-              </h3>
-
-              <div class="row">
-                <div class="col-lg-8">
-                  <div class="form-group mb-4">
-                    <label for="title" class="form-label required">
-                      <i class="fas fa-heading me-2"></i>
-                      게시글 제목
-                    </label>
-                    <input
-                      type="text"
-                      id="title"
-                      v-model="formData.title"
-                      class="form-control form-control-lg"
-                      placeholder="예: 부산 2박 3일 힐링 여행 후기"
-                      required
-                      maxlength="100"
-                    />
-                    <div class="form-text">{{ formData.title.length }}/100자</div>
-                  </div>
-
-                  <div class="form-group mb-4">
-                    <label for="travelTitle" class="form-label required">
-                      <i class="fas fa-route me-2"></i>
-                      여행 계획 제목
-                    </label>
-                    <input
-                      type="text"
-                      id="travelTitle"
-                      v-model="formData.travelTitle"
-                      class="form-control"
-                      placeholder="예: 부산 바다와 함께하는 힐링 여행"
-                      required
-                      maxlength="50"
-                    />
-                    <div class="form-text">
-                      실제 여행 계획의 제목을 입력해주세요 ({{ formData.travelTitle.length }}/50자)
-                    </div>
-                  </div>
-
-                  <div class="form-group mb-4">
-                    <label for="travelTheme" class="form-label required">
-                      <i class="fas fa-palette me-2"></i>
-                      여행 테마
-                    </label>
-                    <select id="travelTheme" v-model="formData.travelTheme" class="form-select" required>
-                      <option value="">테마를 선택해주세요</option>
-                      <option value="힐링">🧘 힐링</option>
-                      <option value="모험">🏔️ 모험</option>
-                      <option value="문화">🏛️ 문화</option>
-                      <option value="자연">🌿 자연</option>
-                      <option value="도시">🏙️ 도시</option>
-                      <option value="맛집">🍽️ 맛집</option>
-                      <option value="가족">👨‍👩‍👧‍👦 가족</option>
-                      <option value="커플">💑 커플</option>
-                      <option value="친구">👥 친구</option>
-                      <option value="혼자">🧳 혼자</option>
-                    </select>
-                  </div>
-
-                  <div class="form-group mb-4">
-                    <label class="form-label">
-                      <i class="fas fa-image me-2"></i>
-                      썸네일 이미지
-                    </label>
-                    <div class="thumbnail-upload">
-                      <div v-if="thumbnailPreview" class="thumbnail-preview">
-                        <img :src="thumbnailPreview" alt="썸네일 미리보기" />
-                        <button type="button" class="remove-thumbnail" @click="removeThumbnail">
-                          <i class="fas fa-times"></i>
-                        </button>
-                      </div>
-                      <div v-else class="thumbnail-placeholder" @click="triggerThumbnailUpload">
-                        <i class="fas fa-camera"></i>
-                        <p>클릭하여 썸네일 이미지 업로드</p>
-                        <small>권장 크기: 800x600px</small>
-                      </div>
-                      <input
-                        ref="thumbnailInput"
-                        type="file"
-                        accept="image/*"
-                        style="display: none"
-                        @change="handleThumbnailUpload"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div class="col-lg-4">
-                  <div class="writing-tips">
-                    <h5><i class="fas fa-lightbulb text-warning me-2"></i>작성 팁</h5>
-                    <ul class="tips-list">
-                      <li>매력적인 제목으로 여행자들의 관심을 끌어보세요</li>
-                      <li>여행 테마를 정확히 선택하면 더 많은 사람들이 찾을 수 있어요</li>
-                      <li>썸네일 이미지는 여행의 분위기를 잘 보여주는 사진으로 선택해주세요</li>
-                      <li>실제 경험을 바탕으로 한 진솔한 내용이 가장 좋아요</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="step-actions">
-              <router-link to="/planboard" class="btn btn-outline-secondary">
-                <i class="fas fa-times me-2"></i>취소
-              </router-link>
-              <button type="button" class="btn btn-primary" @click="nextStep" :disabled="!isStep1Valid">
-                다음 단계 <i class="fas fa-arrow-right ms-2"></i>
-              </button>
-            </div>
+      <div class="row">
+        <div class="col-lg-8">
+          <!-- 여행 계획 선택 단계 -->
+          <div v-if="!selectedPlan && !isEdit" class="plan-selection-step">
+            <PlanSelector
+              @plan-selected="handlePlanSelected"
+              @selection-cancelled="handleSelectionCancelled"
+            />
           </div>
 
-          <!-- Step 2: 여행 정보 -->
-          <div v-if="currentStep === 2" class="form-step">
-            <div class="step-content">
-              <h3 class="step-title">
-                <i class="fas fa-map-marked-alt me-2"></i>
-                여행 정보를 입력해주세요
-              </h3>
-
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="form-group mb-4">
-                    <label for="startDate" class="form-label required">
-                      <i class="fas fa-calendar-alt me-2"></i>
-                      시작일
-                    </label>
-                    <input
-                      type="date"
-                      id="startDate"
-                      v-model="formData.startDate"
-                      class="form-control"
-                      required
-                      @change="calculateDuration"
-                    />
-                  </div>
+          <!-- 게시글 작성 폼 -->
+          <div v-if="selectedPlan || isEdit || showDirectWrite" class="write-form">
+            <form @submit.prevent="handleSubmit">
+              <div class="card">
+                <div class="card-header bg-light">
+                  <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>
+                    여행기 작성
+                  </h5>
                 </div>
-
-                <div class="col-md-6">
-                  <div class="form-group mb-4">
-                    <label for="endDate" class="form-label required">
-                      <i class="fas fa-calendar-check me-2"></i>
-                      종료일
-                    </label>
-                    <input
-                      type="date"
-                      id="endDate"
-                      v-model="formData.endDate"
-                      class="form-control"
-                      required
-                      :min="formData.startDate"
-                      @change="calculateDuration"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div class="row">
-                <div class="col-md-8">
-                  <div class="form-group mb-4">
-                    <label for="destinations" class="form-label required">
-                      <i class="fas fa-map-marker-alt me-2"></i>
-                      여행 목적지
-                    </label>
-                    <input
-                      type="text"
-                      id="destinations"
-                      v-model="formData.travelDestinations"
-                      class="form-control"
-                      placeholder="예: 부산, 해운대, 광안리"
-                      required
-                      maxlength="100"
-                    />
-                    <div class="form-text">주요 방문지를 쉼표(,)로 구분하여 입력해주세요</div>
-                  </div>
-                </div>
-
-                <div class="col-md-4">
-                  <div class="form-group mb-4">
-                    <label for="participantCount" class="form-label required">
-                      <i class="fas fa-users me-2"></i>
-                      인원수
-                    </label>
-                    <select id="participantCount" v-model="formData.participantCount" class="form-select" required>
-                      <option value="">인원 선택</option>
-                      <option value="1">1명 (혼자)</option>
-                      <option value="2">2명 (커플/친구)</option>
-                      <option value="3">3명</option>
-                      <option value="4">4명</option>
-                      <option value="5">5명</option>
-                      <option value="6">6명 이상</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="form-group mb-4">
-                    <label for="estimatedBudget" class="form-label">
-                      <i class="fas fa-won-sign me-2"></i>
-                      예상 예산 (1인 기준)
-                    </label>
-                    <div class="input-group">
-                      <input
-                        type="number"
-                        id="estimatedBudget"
-                        v-model="formData.estimatedBudget"
-                        class="form-control"
-                        placeholder="예: 300000"
-                        min="0"
-                        step="10000"
-                      />
-                      <span class="input-group-text">원</span>
-                    </div>
-                    <div class="form-text">숙박, 교통, 식비, 관광 등 총 예산을 입력해주세요</div>
-                  </div>
-                </div>
-
-                <div class="col-md-6">
-                  <div class="travel-duration-display">
-                    <label class="form-label">
-                      <i class="fas fa-clock me-2"></i>
-                      여행 기간
-                    </label>
-                    <div class="duration-card">
-                      <div class="duration-number">{{ travelDuration }}</div>
-                      <div class="duration-text">일</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 여행 계획 연결 (선택사항) -->
-              <div class="form-group mb-4">
-                <label class="form-label">
-                  <i class="fas fa-link me-2"></i>
-                  내 여행 계획 연결 (선택사항)
-                </label>
-                <div class="plan-selection">
-                  <div v-if="userPlans.length === 0" class="no-plans">
-                    <p class="text-muted">작성된 여행 계획이 없습니다.</p>
-                    <router-link to="/plans/create" class="btn btn-outline-primary btn-sm">
-                      <i class="fas fa-plus me-1"></i>여행 계획 만들기
-                    </router-link>
-                  </div>
-                  <div v-else class="plans-grid">
-                    <div
-                      v-for="plan in userPlans"
-                      :key="plan.planId"
-                      class="plan-card"
-                      :class="{ selected: formData.planId === plan.planId }"
-                      @click="selectPlan(plan)"
-                    >
-                      <div class="plan-info">
-                        <h6 class="plan-title">{{ plan.title }}</h6>
-                        <p class="plan-dates">{{ formatPlanDate(plan.startDate, plan.endDate) }}</p>
+                <div class="card-body">
+                  <!-- 선택된 여행 계획 요약 (수정 시에만 표시하지 않음) -->
+                  <div v-if="selectedPlan && !isEdit" class="selected-plan-summary alert alert-info">
+                    <div class="d-flex justify-content-between align-items-start">
+                      <div>
+                        <h6 class="alert-heading">
+                          <i class="fas fa-route me-2"></i>
+                          선택된 여행 계획: {{ selectedPlan.title }}
+                        </h6>
+                        <p class="mb-1">
+                          <i class="fas fa-calendar-alt me-1"></i>
+                          {{ formatDate(selectedPlan.startDate) }} ~ {{ formatDate(selectedPlan.endDate) }}
+                          ({{ calculateDays(selectedPlan.startDate, selectedPlan.endDate) }}일)
+                        </p>
+                        <p class="mb-0">
+                          <i class="fas fa-map-pin me-1"></i>
+                          관광지 {{ selectedPlan.details ? selectedPlan.details.length : 0 }}개
+                        </p>
                       </div>
-                      <div class="plan-check">
-                        <i v-if="formData.planId === plan.planId" class="fas fa-check-circle text-primary"></i>
-                        <i v-else class="far fa-circle text-muted"></i>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="step-actions">
-              <button type="button" class="btn btn-outline-secondary" @click="prevStep">
-                <i class="fas fa-arrow-left me-2"></i>이전 단계
-              </button>
-              <button type="button" class="btn btn-primary" @click="nextStep" :disabled="!isStep2Valid">
-                다음 단계 <i class="fas fa-arrow-right ms-2"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- Step 3: 내용 작성 -->
-          <div v-if="currentStep === 3" class="form-step">
-            <div class="step-content">
-              <h3 class="step-title">
-                <i class="fas fa-edit me-2"></i>
-                여행 후기를 작성해주세요
-              </h3>
-
-              <div class="row">
-                <div class="col-lg-8">
-                  <div class="form-group mb-4">
-                    <label for="content" class="form-label required">
-                      <i class="fas fa-file-alt me-2"></i>
-                      내용
-                    </label>
-                    <div class="content-editor">
-                      <div class="editor-toolbar">
-                        <button type="button" class="toolbar-btn" @click="insertTemplate('day')" title="일차별 템플릿">
-                          <i class="fas fa-calendar-day"></i>
-                        </button>
-                        <button type="button" class="toolbar-btn" @click="insertTemplate('place')" title="장소 템플릿">
-                          <i class="fas fa-map-marker-alt"></i>
-                        </button>
-                        <button type="button" class="toolbar-btn" @click="insertTemplate('food')" title="맛집 템플릿">
-                          <i class="fas fa-utensils"></i>
-                        </button>
-                        <button type="button" class="toolbar-btn" @click="insertTemplate('tip')" title="팁 템플릿">
-                          <i class="fas fa-lightbulb"></i>
-                        </button>
-                      </div>
-                      <textarea
-                        id="content"
-                        ref="contentTextarea"
-                        v-model="formData.content"
-                        class="form-control content-textarea"
-                        rows="15"
-                        placeholder="여행 경험을 자세히 공유해주세요...
-  
-  예시:
-  🌟 1일차 - 부산역 도착 후 해운대 해수욕장
-  ✈️ 교통: KTX를 이용해서 3시간 정도 걸렸어요
-  🏨 숙소: 해운대 근처 호텔 (1박에 15만원)
-  🍽️ 맛집: 해운대 시장의 회센터 추천!
-  
-  💡 여행 팁:
-  - 주말보다 평일에 가면 숙박비가 저렴해요
-  - 해운대 근처에 주차하기 어려우니 대중교통 이용 추천"
-                        required
-                        minlength="100"
-                      ></textarea>
-                      <div class="content-info">
-                        <span class="char-count">{{ formData.content.length }}자</span>
-                        <span class="char-guide">(최소 100자 이상)</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="form-group mb-4">
-                    <label class="form-label">
-                      <i class="fas fa-tags me-2"></i>
-                      태그
-                    </label>
-                    <div class="tag-input-container">
-                      <div class="selected-tags">
-                        <span v-for="(tag, index) in formData.tags" :key="index" class="tag-item">
-                          #{{ tag }}
-                          <button type="button" @click="removeTag(index)" class="tag-remove">
-                            <i class="fas fa-times"></i>
-                          </button>
-                        </span>
-                      </div>
-                      <input
-                        type="text"
-                        v-model="tagInput"
-                        class="tag-input"
-                        placeholder="태그를 입력하고 Enter를 누르세요"
-                        @keyup.enter="addTag"
-                        @keyup.comma="addTag"
-                        maxlength="20"
-                      />
-                    </div>
-                    <div class="form-text">
-                      쉼표(,) 또는 Enter로 태그를 구분하세요. 최대 10개까지 추가할 수 있습니다.
-                    </div>
-
-                    <!-- 추천 태그 -->
-                    <div class="recommended-tags">
-                      <small class="text-muted">추천 태그:</small>
-                      <button
-                        v-for="recTag in getRecommendedTags()"
-                        :key="recTag"
-                        type="button"
-                        class="recommended-tag"
-                        @click="addRecommendedTag(recTag)"
+                      <button 
+                        type="button" 
+                        class="btn btn-sm btn-outline-secondary"
+                        @click="changePlan"
                       >
-                        #{{ recTag }}
+                        <i class="fas fa-exchange-alt me-1"></i>
+                        계획 변경
                       </button>
                     </div>
                   </div>
 
-                  <div class="form-group mb-4">
-                    <div class="form-check">
-                      <input id="isPublic" v-model="formData.isPublic" type="checkbox" class="form-check-input" />
-                      <label for="isPublic" class="form-check-label">
-                        <i class="fas fa-globe me-2"></i>
-                        공개 게시글로 설정 (다른 사용자들이 볼 수 있습니다)
+                  <!-- 기본 정보 입력 -->
+                  <div class="row mb-4">
+                    <div class="col-md-8">
+                      <label for="title" class="form-label required">
+                        <i class="fas fa-heading me-1"></i>
+                        게시글 제목
                       </label>
+                      <input
+                        type="text"
+                        id="title"
+                        v-model="form.title"
+                        class="form-control"
+                        placeholder="매력적인 제목을 입력해주세요"
+                        required
+                        maxlength="100"
+                      />
+                      <div class="form-text">{{ form.title.length }}/100자</div>
                     </div>
+                    <div class="col-md-4">
+                      <label for="travelTheme" class="form-label">
+                        <i class="fas fa-palette me-1"></i>
+                        여행 테마
+                      </label>
+                      <select
+                        id="travelTheme"
+                        v-model="form.travelTheme"
+                        class="form-select"
+                      >
+                        <option value="">테마 선택</option>
+                        <option value="힐링">🧘‍♀️ 힐링</option>
+                        <option value="모험">🏔️ 모험</option>
+                        <option value="문화">🏛️ 문화</option>
+                        <option value="자연">🌲 자연</option>
+                        <option value="도시">🏙️ 도시</option>
+                        <option value="맛집">🍽️ 맛집</option>
+                        <option value="쇼핑">🛍️ 쇼핑</option>
+                        <option value="역사">📚 역사</option>
+                        <option value="체험">🎯 체험</option>
+                        <option value="사진">📷 사진</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- 여행 상세 정보 -->
+                  <div class="row mb-4">
+                    <div class="col-md-8">
+                      <label for="travelTitle" class="form-label">
+                        <i class="fas fa-map me-1"></i>
+                        여행 이름
+                      </label>
+                      <input
+                        type="text"
+                        id="travelTitle"
+                        v-model="form.travelTitle"
+                        class="form-control"
+                        placeholder="예: 제주도 힐링 여행"
+                        maxlength="50"
+                      />
+                    </div>
+                    <div class="col-md-4">
+                      <label for="travelDuration" class="form-label">
+                        <i class="fas fa-clock me-1"></i>
+                        여행 기간 (일)
+                      </label>
+                      <input
+                        type="number"
+                        id="travelDuration"
+                        v-model.number="form.travelDuration"
+                        class="form-control"
+                        min="1"
+                        max="365"
+                        placeholder="일수"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="row mb-4">
+                    <div class="col-md-6">
+                      <label for="travelDestinations" class="form-label">
+                        <i class="fas fa-map-marker-alt me-1"></i>
+                        주요 목적지
+                      </label>
+                      <input
+                        type="text"
+                        id="travelDestinations"
+                        v-model="form.travelDestinations"
+                        class="form-control"
+                        placeholder="예: 제주도, 서귀포시, 성산일출봉"
+                        maxlength="100"
+                      />
+                      <div class="form-text">쉼표(,)로 구분해서 입력해주세요</div>
+                    </div>
+                    <div class="col-md-6">
+                      <label for="participantCount" class="form-label">
+                        <i class="fas fa-users me-1"></i>
+                        여행 인원
+                      </label>
+                      <select
+                        id="participantCount"
+                        v-model.number="form.participantCount"
+                        class="form-select"
+                      >
+                        <option :value="null">인원 선택</option>
+                        <option :value="1">혼자 여행</option>
+                        <option :value="2">2명 (커플/친구)</option>
+                        <option :value="3">3명</option>
+                        <option :value="4">4명 (가족)</option>
+                        <option :value="5">5명 이상</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- 여행 일정 정보 (선택된 계획이 있을 때만 표시) -->
+                  <div v-if="selectedPlan && selectedPlan.details" class="travel-schedule mb-4">
+                    <h6 class="mb-3">
+                      <i class="fas fa-calendar-alt me-2"></i>
+                      여행 일정 미리보기
+                    </h6>
+                    <div class="schedule-preview">
+                      <div
+                        v-for="(dayGroup, dayNumber) in groupedSchedule"
+                        :key="dayNumber"
+                        class="day-schedule"
+                      >
+                        <div class="day-header">
+                          <span class="day-number">{{ dayNumber }}일차</span>
+                          <span class="day-date">{{ getDayDate(dayNumber) }}</span>
+                        </div>
+                        <div class="day-attractions">
+                          <div
+                            v-for="detail in dayGroup"
+                            :key="detail.detailId"
+                            class="attraction-item"
+                          >
+                            <i class="fas fa-map-pin text-primary me-2"></i>
+                            {{ detail.title }}
+                            <span v-if="detail.visitTime" class="visit-time">
+                              ({{ detail.visitTime }})
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 본문 내용 -->
+                  <div class="mb-4">
+                    <label for="content" class="form-label required">
+                      <i class="fas fa-file-alt me-1"></i>
+                      여행기 내용
+                    </label>
+                    <textarea
+                      id="content"
+                      v-model="form.content"
+                      class="form-control"
+                      rows="12"
+                      placeholder="여행에서 경험한 특별한 순간들을 자세히 공유해주세요.&#10;&#10;- 어떤 곳을 방문했나요?&#10;- 가장 인상 깊었던 경험은?&#10;- 다른 여행자들에게 추천하고 싶은 팁이 있다면?&#10;- 맛집이나 숨은 명소가 있었다면?"
+                      required
+                      maxlength="5000"
+                    ></textarea>
+                    <div class="form-text">{{ form.content.length }}/5000자</div>
+                  </div>
+
+                  <!-- 태그 입력 -->
+                  <div class="mb-4">
+                    <label class="form-label">
+                      <i class="fas fa-tags me-1"></i>
+                      태그
+                    </label>
+                    <PlanBoardTags
+                      :tags="tagList"
+                      :editable="true"
+                      @tag-add="addTag"
+                      @tag-remove="removeTag"
+                      @tags-updated="updateTags"
+                    />
                   </div>
                 </div>
 
-                <div class="col-lg-4">
-                  <div class="preview-card">
-                    <h5><i class="fas fa-eye me-2"></i>미리보기</h5>
-                    <div class="preview-content">
-                      <div v-if="thumbnailPreview" class="preview-thumbnail">
-                        <img :src="thumbnailPreview" alt="썸네일" />
-                      </div>
-                      <div class="preview-title">{{ formData.title || "제목을 입력해주세요" }}</div>
-                      <div class="preview-travel-title">
-                        {{ formData.travelTitle || "여행 계획 제목을 입력해주세요" }}
-                      </div>
-                      <div class="preview-meta">
-                        <span v-if="formData.travelTheme">{{ formData.travelTheme }}</span>
-                        <span v-if="travelDuration > 0">{{ travelDuration }}일</span>
-                        <span v-if="formData.participantCount">{{ formData.participantCount }}명</span>
-                      </div>
-                      <div class="preview-destinations">
-                        {{ formData.travelDestinations || "목적지를 입력해주세요" }}
-                      </div>
+                <!-- 폼 액션 버튼 -->
+                <div class="card-footer bg-light">
+                  <div class="d-flex justify-content-between">
+                    <div>
+                      <button
+                        type="button"
+                        class="btn btn-outline-secondary me-2"
+                        @click="saveDraft"
+                        :disabled="isSubmitting"
+                      >
+                        <i class="fas fa-save me-1"></i>
+                        임시저장
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        @click="handleCancel"
+                      >
+                        <i class="fas fa-times me-1"></i>
+                        취소
+                      </button>
                     </div>
+                    <button
+                      type="submit"
+                      class="btn btn-primary"
+                      :disabled="!isFormValid || isSubmitting"
+                    >
+                      <span v-if="isSubmitting">
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        {{ isEdit ? '수정 중...' : '작성 중...' }}
+                      </span>
+                      <span v-else>
+                        <i class="fas fa-paper-plane me-1"></i>
+                        {{ isEdit ? '수정 완료' : '여행기 작성' }}
+                      </span>
+                    </button>
                   </div>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <!-- 직접 작성 옵션 (여행 계획이 없는 경우) -->
+          <div v-if="!selectedPlan && !isEdit && !showDirectWrite" class="direct-write-option mt-3">
+            <div class="alert alert-info">
+              <div class="text-center">
+                <h6 class="alert-heading">여행 계획 없이 직접 작성하시겠어요?</h6>
+                <p class="mb-3">기존 여행 계획이 없어도 여행기를 작성할 수 있습니다.</p>
+                <button class="btn btn-outline-primary" @click="startDirectWrite">
+                  <i class="fas fa-pen me-1"></i>
+                  직접 작성하기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 사이드바 -->
+        <div class="col-lg-4">
+          <div class="sidebar">
+            <!-- 작성 가이드 -->
+            <div class="card mb-4">
+              <div class="card-header">
+                <h6 class="mb-0">
+                  <i class="fas fa-lightbulb me-2"></i>
+                  작성 가이드
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="guide-item">
+                  <h6>📝 좋은 여행기 작성 팁</h6>
+                  <ul class="small">
+                    <li>구체적인 장소와 경험을 포함하세요</li>
+                    <li>사진과 함께 설명하면 더 생생해요</li>
+                    <li>실용적인 팁(교통, 맛집 등)을 공유하세요</li>
+                    <li>솔직한 후기가 더 도움이 됩니다</li>
+                  </ul>
+                </div>
+                <div class="guide-item">
+                  <h6>🏷️ 태그 활용</h6>
+                  <ul class="small">
+                    <li>지역명, 테마, 특징을 태그로 추가</li>
+                    <li>다른 사용자가 쉽게 찾을 수 있어요</li>
+                    <li>예: #제주도 #힐링 #맛집투어</li>
+                  </ul>
                 </div>
               </div>
             </div>
 
-            <div class="step-actions">
-              <button type="button" class="btn btn-outline-secondary" @click="prevStep">
-                <i class="fas fa-arrow-left me-2"></i>이전 단계
-              </button>
-              <button type="submit" class="btn btn-success" :disabled="!isStep3Valid || isSubmitting">
-                <span v-if="isSubmitting">
-                  <span class="spinner-border spinner-border-sm me-2"></span>
-                  {{ isEdit ? "수정 중..." : "등록 중..." }}
-                </span>
-                <span v-else>
-                  <i class="fas fa-check me-2"></i>
-                  {{ isEdit ? "수정 완료" : "게시글 등록" }}
-                </span>
-              </button>
+            <!-- 인기 태그 -->
+            <div class="card">
+              <div class="card-header">
+                <h6 class="mb-0">
+                  <i class="fas fa-fire me-2"></i>
+                  인기 태그
+                </h6>
+              </div>
+              <div class="card-body">
+                <div class="popular-tags">
+                  <span
+                    v-for="tag in popularTags"
+                    :key="tag"
+                    class="badge bg-light text-dark me-1 mb-1 clickable-tag"
+                    @click="addPopularTag(tag)"
+                  >
+                    #{{ tag }}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import { useAuthStore } from "@/stores/auth";
-import planboardAPI from "@/api/planboard";
-import planAPI from "@/api/plan";
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
+import planboardAPI from '@/api/planboard';
+import PlanSelector from '@/components/planboard/PlanSelector.vue';
+import PlanBoardTags from '@/components/planboard/PlanBoardTags.vue';
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 
-// 인증 확인
-if (!authStore.isAuthenticated) {
-  router.push("/login?redirect=" + encodeURIComponent(route.fullPath));
-}
-
 // 상태 관리
-const currentStep = ref(1);
-const isSubmitting = ref(false);
-const thumbnailPreview = ref("");
-const thumbnailInput = ref(null);
-const contentTextarea = ref(null);
-const tagInput = ref("");
-const userPlans = ref([]);
-
 const isEdit = computed(() => !!route.params.pboardNo);
-const pboardNo = computed(() => parseInt(route.params.pboardNo));
+const selectedPlan = ref(null);
+const showDirectWrite = ref(false);
+const isSubmitting = ref(false);
+const tagList = ref([]);
+const popularTags = ref([
+  '제주도', '부산', '서울', '강릉', '여수', '경주', '전주', '춘천',
+  '힐링', '맛집', '카페', '바다', '산', '야경', '일출', '혼자여행',
+  '커플여행', '가족여행', '친구여행', '사진맛집', '핫플레이스'
+]);
 
 // 폼 데이터
-const formData = ref({
-  // 기본 정보
-  title: "",
-  travelTitle: "",
-  travelTheme: "",
-  thumbnailImage: "",
-
-  // 여행 정보
-  startDate: "",
-  endDate: "",
-  travelDestinations: "",
-  participantCount: "",
-  estimatedBudget: null,
+const form = ref({
+  title: '',
+  content: '',
+  travelTitle: '',
+  travelTheme: '',
+  travelDestinations: '',
+  travelDuration: null,
+  participantCount: null,
   planId: null,
-
-  // 내용
-  content: "",
-  tags: [],
-  isPublic: true,
+  tagNames: ''
 });
 
 // 계산된 속성
-const travelDuration = computed(() => {
-  if (!formData.value.startDate || !formData.value.endDate) return 0;
-
-  const start = new Date(formData.value.startDate);
-  const end = new Date(formData.value.endDate);
-  const diffTime = Math.abs(end - start);
-  return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+const isFormValid = computed(() => {
+  return form.value.title.trim() && form.value.content.trim();
 });
 
-const isStep1Valid = computed(() => {
-  return formData.value.title.trim() && formData.value.travelTitle.trim() && formData.value.travelTheme;
-});
-
-const isStep2Valid = computed(() => {
-  return (
-    formData.value.startDate &&
-    formData.value.endDate &&
-    formData.value.travelDestinations.trim() &&
-    formData.value.participantCount
-  );
-});
-
-const isStep3Valid = computed(() => {
-  return formData.value.content.trim().length >= 100;
+const groupedSchedule = computed(() => {
+  if (!selectedPlan.value || !selectedPlan.value.details) return {};
+  
+  const grouped = {};
+  selectedPlan.value.details.forEach(detail => {
+    if (!grouped[detail.dayNumber]) {
+      grouped[detail.dayNumber] = [];
+    }
+    grouped[detail.dayNumber].push(detail);
+  });
+  
+  // 각 일차별로 orderNo 순으로 정렬
+  Object.keys(grouped).forEach(day => {
+    grouped[day].sort((a, b) => (a.orderNo || 0) - (b.orderNo || 0));
+  });
+  
+  return grouped;
 });
 
 // 메서드
-const nextStep = () => {
-  if (currentStep.value < 3) {
-    currentStep.value++;
-  }
-};
-
-const prevStep = () => {
-  if (currentStep.value > 1) {
-    currentStep.value--;
-  }
-};
-
-const calculateDuration = () => {
-  // 종료일이 시작일보다 이전인 경우 조정
-  if (formData.value.startDate && formData.value.endDate) {
-    const start = new Date(formData.value.startDate);
-    const end = new Date(formData.value.endDate);
-
-    if (end < start) {
-      formData.value.endDate = formData.value.startDate;
+const handlePlanSelected = (plan) => {
+  selectedPlan.value = plan;
+  
+  // 폼에 여행 계획 정보 자동 입력
+  if (plan) {
+    form.value.planId = plan.planId;
+    form.value.travelTitle = plan.title;
+    form.value.travelDuration = calculateDays(plan.startDate, plan.endDate);
+    
+    // 목적지 추출 (details에서 관광지명들 추출)
+    if (plan.details && plan.details.length > 0) {
+      const destinations = [...new Set(plan.details.map(detail => detail.title))];
+      form.value.travelDestinations = destinations.slice(0, 5).join(', ');
+    }
+    
+    // 기본 제목 제안
+    if (!form.value.title) {
+      form.value.title = `${plan.title} 여행기`;
     }
   }
 };
 
-const triggerThumbnailUpload = () => {
-  thumbnailInput.value?.click();
+const handleSelectionCancelled = () => {
+  selectedPlan.value = null;
 };
 
-const handleThumbnailUpload = (event) => {
-  const file = event.target.files[0];
-  if (file) {
-    if (file.size > 5 * 1024 * 1024) {
-      // 5MB 제한
-      alert("파일 크기는 5MB 이하로 선택해주세요.");
-      return;
-    }
+const changePlan = () => {
+  selectedPlan.value = null;
+  showDirectWrite.value = false;
+  
+  // 폼 초기화 (제목과 내용은 유지)
+  const titleBackup = form.value.title;
+  const contentBackup = form.value.content;
+  
+  form.value = {
+    title: titleBackup,
+    content: contentBackup,
+    travelTitle: '',
+    travelTheme: '',
+    travelDestinations: '',
+    travelDuration: null,
+    participantCount: null,
+    planId: null,
+    tagNames: ''
+  };
+};
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      thumbnailPreview.value = e.target.result;
-      formData.value.thumbnailImage = e.target.result;
-    };
-    reader.readAsDataURL(file);
+const startDirectWrite = () => {
+  showDirectWrite.value = true;
+};
+
+const addTag = (tagName) => {
+  if (!tagList.value.find(tag => tag.tagName === tagName)) {
+    tagList.value.push({ tagName, useCount: 1 });
+    updateTagNames();
   }
 };
 
-const removeThumbnail = () => {
-  thumbnailPreview.value = "";
-  formData.value.thumbnailImage = "";
-  if (thumbnailInput.value) {
-    thumbnailInput.value.value = "";
+const removeTag = (tag) => {
+  const index = tagList.value.findIndex(t => t.tagName === tag.tagName);
+  if (index > -1) {
+    tagList.value.splice(index, 1);
+    updateTagNames();
   }
 };
 
-const loadUserPlans = async () => {
+const updateTags = (newTags) => {
+  tagList.value = newTags;
+  updateTagNames();
+};
+
+const addPopularTag = (tagName) => {
+  addTag(tagName);
+};
+
+const updateTagNames = () => {
+  form.value.tagNames = tagList.value.map(tag => tag.tagName).join(',');
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+};
+
+const calculateDays = (startDate, endDate) => {
+  if (!startDate || !endDate) return 0;
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = Math.abs(end - start);
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+};
+
+const getDayDate = (dayNumber) => {
+  if (!selectedPlan.value || !selectedPlan.value.startDate) return '';
+  
+  const startDate = new Date(selectedPlan.value.startDate);
+  const dayDate = new Date(startDate);
+  dayDate.setDate(startDate.getDate() + dayNumber - 1);
+  
+  return dayDate.toLocaleDateString('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short'
+  });
+};
+
+const saveDraft = async () => {
   try {
-    const response = await planAPI.getUserPlans();
-    userPlans.value = response.data || [];
+    // 임시저장 로직 (localStorage 활용)
+    const draftData = {
+      ...form.value,
+      selectedPlan: selectedPlan.value,
+      tagList: tagList.value,
+      savedAt: new Date().toISOString()
+    };
+    
+    localStorage.setItem('planboard_draft', JSON.stringify(draftData));
+    alert('임시저장되었습니다.');
   } catch (error) {
-    console.error("사용자 여행 계획 로드 오류:", error);
+    console.error('임시저장 오류:', error);
+    alert('임시저장에 실패했습니다.');
   }
 };
 
-const selectPlan = (plan) => {
-  if (formData.value.planId === plan.planId) {
-    formData.value.planId = null;
-  } else {
-    formData.value.planId = plan.planId;
-  }
-};
-
-const formatPlanDate = (startDate, endDate) => {
-  if (!startDate || !endDate) return "";
-
-  const start = new Date(startDate).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" });
-  const end = new Date(endDate).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" });
-
-  return `${start} ~ ${end}`;
-};
-
-const insertTemplate = (type) => {
-  const templates = {
-    day: "\n\n🌟 X일차 - 제목\n✈️ 교통: \n🏨 숙소: \n🍽️ 맛집: \n📷 포토스팟: \n\n",
-    place: "\n\n📍 장소명: \n⏰ 소요시간: \n💰 비용: \n📝 후기: \n\n",
-    food: "\n\n🍽️ 맛집명: \n📍 위치: \n💰 가격: \n⭐ 평점: \n📝 추천메뉴: \n\n",
-    tip: "\n\n💡 여행 팁\n- \n- \n- \n\n",
-  };
-
-  const template = templates[type];
-  const textarea = contentTextarea.value;
-  const cursorPosition = textarea.selectionStart;
-
-  formData.value.content =
-    formData.value.content.substring(0, cursorPosition) + template + formData.value.content.substring(cursorPosition);
-
-  // 커서 위치 조정
-  setTimeout(() => {
-    textarea.focus();
-    textarea.setSelectionRange(cursorPosition + template.length, cursorPosition + template.length);
-  }, 0);
-};
-
-const addTag = () => {
-  const tag = tagInput.value.trim().replace(/[,#]/g, "");
-
-  if (tag && !formData.value.tags.includes(tag) && formData.value.tags.length < 10) {
-    formData.value.tags.push(tag);
-    tagInput.value = "";
-  }
-};
-
-const removeTag = (index) => {
-  formData.value.tags.splice(index, 1);
-};
-
-const addRecommendedTag = (tag) => {
-  if (!formData.value.tags.includes(tag) && formData.value.tags.length < 10) {
-    formData.value.tags.push(tag);
-  }
-};
-
-const getRecommendedTags = () => {
-  const themeBasedTags = {
-    힐링: ["힐링", "휴양", "온천", "스파", "조용한"],
-    모험: ["모험", "액티비티", "트레킹", "스릴", "도전"],
-    문화: ["문화", "역사", "박물관", "전통", "유적지"],
-    자연: ["자연", "등산", "숲", "바다", "풍경"],
-    도시: ["도시", "쇼핑", "카페", "야경", "건축"],
-    맛집: ["맛집", "현지음식", "맛투어", "별미", "요리"],
-    가족: ["가족여행", "아이와함께", "체험", "안전", "편리"],
-    커플: ["커플여행", "로맨틱", "데이트", "추억", "사진"],
-    친구: ["친구여행", "우정", "재미", "파티", "추억"],
-    혼자: ["혼행", "자유", "사색", "힐링", "나만의시간"],
-  };
-
-  const baseTags = ["국내여행", "추천", "후기", "정보", "팁"];
-  const themeTags = themeBasedTags[formData.value.travelTheme] || [];
-
-  return [...baseTags, ...themeTags].filter((tag) => !formData.value.tags.includes(tag));
-};
-
-const loadPostForEdit = async () => {
-  if (!isEdit.value) return;
-
+const loadDraft = () => {
   try {
-    const response = await planboardAPI.getPlanBoardDetail(pboardNo.value);
-    const post = response.data;
-
-    // 권한 확인
-    if (post.userId !== authStore.user?.id && !authStore.isAdmin) {
-      alert("수정 권한이 없습니다.");
-      router.push("/planboard");
-      return;
-    }
-
-    // 폼 데이터 설정
-    formData.value = {
-      title: post.title || "",
-      travelTitle: post.travelTitle || "",
-      travelTheme: post.travelTheme || "",
-      thumbnailImage: post.thumbnailImage || "",
-      startDate: post.startDate || "",
-      endDate: post.endDate || "",
-      travelDestinations: post.travelDestinations || "",
-      participantCount: post.participantCount?.toString() || "",
-      estimatedBudget: post.estimatedBudget || null,
-      planId: post.planId || null,
-      content: post.content || "",
-      tags: post.tags?.map((tag) => tag.tagName) || [],
-      isPublic: post.isPublic !== false,
-    };
-
-    // 썸네일 미리보기 설정
-    if (post.thumbnailImage) {
-      thumbnailPreview.value = post.thumbnailImage;
+    const draftData = localStorage.getItem('planboard_draft');
+    if (draftData) {
+      const draft = JSON.parse(draftData);
+      
+      if (confirm('임시저장된 데이터가 있습니다. 불러오시겠습니까?')) {
+        form.value = { ...draft };
+        selectedPlan.value = draft.selectedPlan;
+        tagList.value = draft.tagList || [];
+        showDirectWrite.value = !selectedPlan.value;
+      }
     }
   } catch (error) {
-    console.error("게시글 로드 오류:", error);
-    alert("게시글을 불러오는 중 오류가 발생했습니다.");
-    router.push("/planboard");
+    console.error('임시저장 데이터 로드 오류:', error);
   }
 };
 
-const submitForm = async () => {
+const handleSubmit = async () => {
+  if (!isFormValid.value) {
+    alert('제목과 내용을 모두 입력해주세요.');
+    return;
+  }
+  
   try {
     isSubmitting.value = true;
-
-    // 태그 객체 배열로 변환
-    const tagsData = formData.value.tags.map((tagName) => ({ tagName }));
-
-    const postData = {
-      ...formData.value,
-      travelDuration: travelDuration.value,
-      tags: tagsData,
-      participantCount: parseInt(formData.value.participantCount),
+    
+    const submitData = {
+      ...form.value,
+      tagNames: form.value.tagNames || ''
     };
-
+    
     if (isEdit.value) {
-      // 게시글 수정
-      await planboardAPI.updatePlanBoard(pboardNo.value, postData);
-      alert("게시글이 수정되었습니다.");
-      router.push(`/planboard/${pboardNo.value}`);
+      await planboardAPI.updatePlanBoard(route.params.pboardNo, submitData);
+      alert('여행기가 수정되었습니다.');
     } else {
-      // 게시글 등록
-      const response = await planboardAPI.createPlanBoard(postData);
-      alert("게시글이 등록되었습니다!");
-      router.push(`/planboard/${response.data.pboardNo}`);
+      await planboardAPI.createPlanBoard(submitData);
+      alert('새로운 여행기가 작성되었습니다.');
+      
+      // 임시저장 데이터 삭제
+      localStorage.removeItem('planboard_draft');
     }
+    
+    router.push('/planboard');
   } catch (error) {
-    console.error("게시글 저장 오류:", error);
-    alert(isEdit.value ? "게시글 수정에 실패했습니다." : "게시글 등록에 실패했습니다.");
+    console.error('게시글 저장 오류:', error);
+    alert(isEdit.value ? '게시글 수정에 실패했습니다.' : '게시글 작성에 실패했습니다.');
   } finally {
     isSubmitting.value = false;
   }
 };
 
+const handleCancel = () => {
+  if (confirm('작성 중인 내용이 사라집니다. 정말 취소하시겠습니까?')) {
+    router.push('/planboard');
+  }
+};
+
+const loadExistingPost = async () => {
+  if (isEdit.value) {
+    try {
+      const response = await planboardAPI.getPlanBoardDetail(route.params.pboardNo);
+      const post = response.data;
+      
+      // 폼에 기존 데이터 로드
+      form.value = {
+        title: post.title || '',
+        content: post.content || '',
+        travelTitle: post.travelTitle || '',
+        travelTheme: post.travelTheme || '',
+        travelDestinations: post.travelDestinations || '',
+        travelDuration: post.travelDuration || null,
+        participantCount: post.participantCount || null,
+        planId: post.planId || null,
+        tagNames: post.tagNames || ''
+      };
+      
+      // 태그 리스트 설정
+      if (post.tagNames) {
+        tagList.value = post.tagNames.split(',').map(tag => ({
+          tagName: tag.trim(),
+          useCount: 1
+        }));
+      }
+      
+      showDirectWrite.value = true; // 수정 모드에서는 바로 폼 표시
+    } catch (error) {
+      console.error('게시글 로드 오류:', error);
+      alert('게시글을 불러오는데 실패했습니다.');
+      router.push('/planboard');
+    }
+  }
+};
+
 // 라이프사이클
 onMounted(async () => {
-  await loadUserPlans();
-
+  if (!authStore.isAuthenticated) {
+    alert('로그인이 필요합니다.');
+    router.push('/login');
+    return;
+  }
+  
   if (isEdit.value) {
-    await loadPostForEdit();
+    await loadExistingPost();
+  } else {
+    loadDraft(); // 새 작성 시에만 임시저장 데이터 확인
   }
 });
 </script>
 
 <style scoped>
+/* ===== 전체 레이아웃 ===== */
+.planboard-write-view {
+  min-height: calc(100vh - 120px);
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.container {
+  max-width: 1200px;
+}
+
+/* ===== 페이지 헤더 ===== */
 .page-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 2.5rem 2rem;
-  border-radius: 15px;
+  text-align: center;
   margin-bottom: 2rem;
-  text-align: center;
-}
-
-.page-title {
-  font-size: 2.2rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
-
-.page-subtitle {
-  font-size: 1.1rem;
-  opacity: 0.9;
-  margin: 0;
-}
-
-.progress-steps {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 3rem;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  opacity: 0.4;
-  transition: all 0.3s ease;
-}
-
-.step.active,
-.step.completed {
-  opacity: 1;
-}
-
-.step-number {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: #e9ecef;
-  color: #6c757d;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 1.2rem;
-  margin-bottom: 0.5rem;
-  transition: all 0.3s ease;
-}
-
-.step.active .step-number {
-  background: #0d6efd;
-  color: white;
-  transform: scale(1.1);
-}
-
-.step.completed .step-number {
-  background: #28a745;
-  color: white;
-}
-
-.step-label {
-  font-size: 0.9rem;
-  font-weight: 500;
-  text-align: center;
-}
-
-.step-line {
-  width: 100px;
-  height: 3px;
-  background: #e9ecef;
-  margin: 0 1rem;
-  transition: all 0.3s ease;
-}
-
-.step-line.completed {
-  background: #28a745;
-}
-
-.form-container {
+  padding: 2rem 0;
   background: white;
   border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.breadcrumb {
+  justify-content: center;
+  background: transparent;
+  margin-bottom: 1rem;
+}
+
+.breadcrumb-item a {
+  color: #6c757d;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.breadcrumb-item a:hover {
+  color: #0d6efd;
+}
+
+.breadcrumb-item.active {
+  color: #0d6efd;
+  font-weight: 600;
+}
+
+.page-header h1 {
+  color: #212529;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.page-header p {
+  color: #6c757d;
+  font-size: 1.1rem;
+  margin-bottom: 0;
+}
+
+/* ===== 카드 스타일 ===== */
+.card {
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 15px;
+  overflow: hidden;
+  background: white;
+  margin-bottom: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.card-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1.5rem;
+  border-bottom: none;
+  position: relative;
   overflow: hidden;
 }
 
-.form-step {
-  padding: 2.5rem;
+.card-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s;
 }
 
-.step-content {
-  margin-bottom: 3rem;
+.card-header:hover::before {
+  left: 100%;
 }
 
-.step-title {
-  font-size: 1.5rem;
+.card-header h5, .card-header h6 {
+  margin-bottom: 0;
   font-weight: 600;
-  color: #333;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 1;
 }
 
-.form-label.required::after {
-  content: " *";
-  color: #dc3545;
+.card-header i {
+  color: rgba(255, 255, 255, 0.9);
+  margin-right: 0.5rem;
+}
+
+.card-body {
+  padding: 2rem;
+  background: white;
+}
+
+.card-footer {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-top: 1px solid #dee2e6;
+  padding: 1.5rem;
+}
+
+/* ===== 선택된 여행 계획 요약 ===== */
+.selected-plan-summary {
+  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+  border: 1px solid #bbdefb;
+  border-left: 4px solid #0d6efd;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.selected-plan-summary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #0d6efd, #6610f2, #0d6efd);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.selected-plan-summary .alert-heading {
+  color: #0d6efd;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.selected-plan-summary p {
+  margin-bottom: 0.5rem;
+  color: #495057;
+  font-weight: 500;
+}
+
+.selected-plan-summary .btn-outline-secondary {
+  border-color: #6c757d;
+  color: #6c757d;
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+.selected-plan-summary .btn-outline-secondary:hover {
+  background: #6c757d;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+/* ===== 폼 요소 스타일 ===== */
+.form-label {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  font-size: 0.95rem;
 }
 
 .form-label i {
   color: #0d6efd;
-  width: 20px;
+  width: 18px;
+  margin-right: 0.5rem;
+}
+
+.form-label.required::after {
+  content: ' *';
+  color: #dc3545;
+  font-weight: 700;
+}
+
+.form-control, .form-select {
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+  background: #f8f9ff;
+}
+
+.form-control:hover, .form-select:hover {
+  border-color: #adb5bd;
+}
+
+.form-text {
+  font-size: 0.85rem;
+  color: #6c757d;
+  text-align: right;
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.6;
+}
+
+/* ===== 여행 일정 미리보기 ===== */
+.travel-schedule {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 15px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.travel-schedule h6 {
+  color: #495057;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #0d6efd;
+  display: inline-block;
+}
+
+.schedule-preview {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.day-schedule {
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.day-schedule:hover {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.day-schedule:last-child {
+  margin-bottom: 0;
+}
+
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 1rem;
+}
+
+.day-number {
+  background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+  color: white;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
+}
+
+.day-date {
+  font-size: 0.85rem;
+  color: #6c757d;
+  font-weight: 600;
+  background: #f8f9fa;
+  padding: 0.25rem 0.75rem;
+  border-radius: 15px;
+}
+
+.day-attractions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.attraction-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  color: #495057;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.attraction-item:hover {
+  border-left-color: #0d6efd;
+  background: linear-gradient(135deg, #e8f4ff 0%, #f0f7ff 100%);
+  transform: translateX(5px);
+  box-shadow: 0 2px 8px rgba(13, 110, 253, 0.15);
+}
+
+.attraction-item i {
+  margin-right: 0.75rem;
+  width: 16px;
+  flex-shrink: 0;
+}
+
+.visit-time {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: #6c757d;
+  background: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-weight: 600;
+  border: 1px solid #dee2e6;
+}
+
+/* ===== 직접 작성 옵션 ===== */
+.direct-write-option {
+  margin-top: 2rem;
+  animation: fadeInUp 0.5s ease-out;
+}
+
+.direct-write-option .alert {
+  border: 2px dashed #0d6efd;
+  background: linear-gradient(135deg, #f8f9ff 0%, #e8f0ff 100%);
+  border-radius: 15px;
+  padding: 2.5rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.direct-write-option .alert::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #0d6efd, #6610f2, #0d6efd);
+  border-radius: 15px;
+  z-index: -1;
+  animation: borderRotate 3s linear infinite;
+}
+
+@keyframes borderRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.direct-write-option .alert-heading {
+  color: #0d6efd;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.direct-write-option p {
+  color: #495057;
+  font-size: 1.05rem;
+  margin-bottom: 1.5rem;
+}
+
+.direct-write-option .btn {
+  padding: 0.75rem 2rem;
+  font-weight: 700;
+  border-radius: 25px;
+  background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+  border: none;
+  color: white;
+  box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.direct-write-option .btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.direct-write-option .btn:hover::before {
+  left: 100%;
+}
+
+.direct-write-option .btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(13, 110, 253, 0.4);
+}
+
+/* ===== 사이드바 ===== */
+.sidebar {
+  position: sticky;
+  top: 100px;
+}
+
+.sidebar .card {
+  border: none;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  border-radius: 15px;
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.sidebar .card:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  transform: translateY(-3px);
+}
+
+.sidebar .card-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1.25rem;
+}
+
+.sidebar .card-header h6 {
+  color: white;
+  font-weight: 700;
+  margin-bottom: 0;
+}
+
+.sidebar .card-body {
+  padding: 1.5rem;
+}
+
+/* ===== 가이드 아이템 ===== */
+.guide-item {
+  padding: 1.25rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 10px;
+  border-left: 4px solid #0d6efd;
+  margin-bottom: 1.25rem;
+  transition: all 0.3s ease;
+}
+
+.guide-item:hover {
+  border-left-color: #6610f2;
+  background: linear-gradient(135deg, #e8f4ff 0%, #f0f7ff 100%);
+  transform: translateX(5px);
+}
+
+.guide-item:last-child {
+  margin-bottom: 0;
+}
+
+.guide-item h6 {
+  color: #0d6efd;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.guide-item ul {
+  margin-bottom: 0;
+  padding-left: 1.5rem;
+}
+
+.guide-item li {
+  color: #495057;
+  line-height: 1.7;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.guide-item li:last-child {
+  margin-bottom: 0;
+}
+
+/* ===== 인기 태그 ===== */
+.popular-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  line-height: 1.5;
+}
+
+.clickable-tag {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.clickable-tag::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(13, 110, 253, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.clickable-tag:hover::before {
+  left: 100%;
+}
+
+.clickable-tag:hover {
+  background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+  color: white;
+  border-color: #0d6efd;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+}
+
+/* ===== 버튼 스타일 ===== */
+.btn {
+  border-radius: 10px;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  border: none;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn:hover::before {
+  left: 100%;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 8px 25px rgba(13, 110, 253, 0.4);
+}
+
+.btn-outline-secondary {
+  border: 2px solid #6c757d;
+  color: #6c757d;
+  background: white;
+}
+
+.btn-outline-secondary:hover {
+  background: #6c757d;
+  color: white;
+  box-shadow: 0 4px 15px rgba(108, 117, 125, 0.3);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ===== 로딩 상태 ===== */
+.spinner-border {
+  width: 1.2rem;
+  height: 1.2rem;
+  animation: spinner-border 0.8s linear infinite;
+}
+
+@keyframes spinner-border {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ===== 스크롤바 커스터마이징 ===== */
+.schedule-preview::-webkit-scrollbar {
+  width: 8px;
+}
+
+.schedule-preview::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.schedule-preview::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #0d6efd, #6610f2);
+  border-radius: 4px;
+}
+
+.schedule-preview::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #0b5ed7, #5a0fc8);
+}
+
+/* ===== 애니메이션 ===== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.plan-selection-step,
+.write-form,
+.direct-write-option {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
 }
 
 .form-control:focus,
 .form-select:focus {
-  border-color: #0d6efd;
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+  animation: pulse 0.3s ease-in-out;
 }
 
-.writing-tips {
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 10px;
-  border-left: 4px solid #0d6efd;
-}
-
-.tips-list {
-  list-style: none;
-  padding: 0;
-  margin: 1rem 0 0 0;
-}
-
-.tips-list li {
-  padding: 0.5rem 0;
-  font-size: 0.9rem;
-  color: #555;
-  position: relative;
-  padding-left: 1.5rem;
-}
-
-.tips-list li::before {
-  content: "💡";
-  position: absolute;
-  left: 0;
-  top: 0.5rem;
-}
-
-.thumbnail-upload {
-  border: 2px dashed #dee2e6;
-  border-radius: 10px;
-  overflow: hidden;
-  transition: border-color 0.3s ease;
-}
-
-.thumbnail-upload:hover {
-  border-color: #0d6efd;
-}
-
-.thumbnail-preview {
-  position: relative;
-  width: 100%;
-  height: 200px;
-}
-
-.thumbnail-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.remove-thumbnail {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(220, 53, 69, 0.8);
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.3s ease;
-}
-
-.remove-thumbnail:hover {
-  background: #dc3545;
-}
-
-.thumbnail-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  cursor: pointer;
-  color: #6c757d;
-  transition: color 0.3s ease;
-}
-
-.thumbnail-placeholder:hover {
-  color: #0d6efd;
-}
-
-.thumbnail-placeholder i {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-}
-
-.duration-card {
-  background: #e9f0ff;
-  border: 2px solid #0d6efd;
-  border-radius: 10px;
-  padding: 1rem;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.duration-number {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #0d6efd;
-}
-
-.duration-text {
-  font-size: 1.2rem;
-  color: #0d6efd;
-}
-
-.plan-selection {
-  border: 1px solid #dee2e6;
-  border-radius: 10px;
-  padding: 1rem;
-}
-
-.no-plans {
-  text-align: center;
-  padding: 2rem;
-}
-
-.plans-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1rem;
-}
-
-.plan-card {
-  border: 2px solid #dee2e6;
-  border-radius: 8px;
-  padding: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.plan-card:hover {
-  border-color: #0d6efd;
-  background: #f8f9fa;
-}
-
-.plan-card.selected {
-  border-color: #0d6efd;
-  background: #e9f0ff;
-}
-
-.plan-info {
-  flex: 1;
-}
-
-.plan-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.plan-dates {
-  font-size: 0.8rem;
-  color: #6c757d;
-  margin: 0;
-}
-
-.plan-check {
-  margin-left: 1rem;
-  font-size: 1.2rem;
-}
-
-.content-editor {
-  border: 1px solid #dee2e6;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.editor-toolbar {
-  background: #f8f9fa;
-  padding: 0.75rem;
-  border-bottom: 1px solid #dee2e6;
-  display: flex;
-  gap: 0.5rem;
-}
-
-.toolbar-btn {
-  background: white;
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
-  padding: 0.5rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  color: #6c757d;
-}
-
-.toolbar-btn:hover {
-  background: #0d6efd;
-  color: white;
-  border-color: #0d6efd;
-}
-
-.content-textarea {
-  border: none;
-  border-radius: 0 0 10px 10px;
-  resize: vertical;
-  min-height: 300px;
-}
-
-.content-textarea:focus {
-  box-shadow: none;
-}
-
-.content-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  background: #f8f9fa;
-  border-top: 1px solid #dee2e6;
-  font-size: 0.85rem;
-}
-
-.char-count {
-  font-weight: 600;
-  color: #0d6efd;
-}
-
-.char-guide {
-  color: #6c757d;
-}
-
-.tag-input-container {
-  border: 1px solid #dee2e6;
-  border-radius: 8px;
-  padding: 0.5rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-  min-height: 50px;
-}
-
-.tag-input-container:focus-within {
-  border-color: #0d6efd;
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-}
-
-.selected-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.tag-item {
-  background: #0d6efd;
-  color: white;
-  padding: 0.25rem 0.75rem;
-  border-radius: 15px;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.tag-remove {
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  padding: 0;
-  font-size: 0.8rem;
-  opacity: 0.8;
-  transition: opacity 0.3s ease;
-}
-
-.tag-remove:hover {
-  opacity: 1;
-}
-
-.tag-input {
-  border: none;
-  outline: none;
-  flex: 1;
-  min-width: 150px;
-  padding: 0.25rem;
-  font-size: 0.9rem;
-}
-
-.recommended-tags {
-  margin-top: 0.5rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.recommended-tag {
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  color: #6c757d;
-  padding: 0.25rem 0.5rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.recommended-tag:hover {
-  background: #0d6efd;
-  color: white;
-  border-color: #0d6efd;
-}
-
-.preview-card {
-  background: #f8f9fa;
-  border-radius: 12px;
-  padding: 1.5rem;
-  position: sticky;
-  top: 2rem;
-}
-
-.preview-card h5 {
-  margin-bottom: 1rem;
-  color: #333;
-}
-
-.preview-content {
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.preview-thumbnail {
-  width: 100%;
-  height: 120px;
-  overflow: hidden;
-}
-
-.preview-thumbnail img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.preview-title {
-  font-size: 1rem;
-  font-weight: 600;
-  padding: 1rem 1rem 0.5rem;
-  color: #333;
-}
-
-.preview-travel-title {
-  font-size: 0.9rem;
-  color: #0d6efd;
-  padding: 0 1rem 0.5rem;
-  font-weight: 500;
-}
-
-.preview-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0 1rem 0.5rem;
-  font-size: 0.8rem;
-}
-
-.preview-meta span {
-  background: #e9ecef;
-  padding: 0.25rem 0.5rem;
-  border-radius: 10px;
-  color: #495057;
-}
-
-.preview-destinations {
-  font-size: 0.85rem;
-  color: #6c757d;
-  padding: 0 1rem 1rem;
-}
-
-.step-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 2rem;
-  border-top: 2px solid #f0f0f0;
+/* ===== 반응형 디자인 ===== */
+@media (max-width: 1200px) {
+  .sidebar {
+    position: static;
+    margin-top: 2rem;
+  }
 }
 
 @media (max-width: 768px) {
-  .form-step {
+  .planboard-write-view {
+    background: white;
+  }
+  
+  .page-header {
+    text-align: left;
+    margin-bottom: 1.5rem;
     padding: 1.5rem;
   }
-
-  .page-header {
-    padding: 2rem 1rem;
+  
+  .page-header h1 {
+    font-size: 1.5rem;
   }
-
-  .page-title {
-    font-size: 1.8rem;
+  
+  .card-body {
+    padding: 1.5rem;
   }
-
-  .progress-steps {
+  
+  .card-footer {
+    padding: 1rem;
+  }
+  
+  .travel-schedule {
+    padding: 1.25rem;
+  }
+  
+  .day-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .day-attractions {
+    padding-left: 0;
+  }
+  
+  .attraction-item {
+    padding: 0.6rem;
+    font-size: 0.85rem;
+  }
+  
+  .selected-plan-summary {
+    padding: 1.25rem;
+  }
+  
+  .selected-plan-summary .d-flex {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start !important;
+  }
+  
+  .card-footer .d-flex {
     flex-direction: column;
     gap: 1rem;
   }
-
-  .step-line {
-    width: 3px;
-    height: 30px;
-    margin: 0;
+  
+  .card-footer .d-flex > div:first-child {
+    order: 2;
   }
-
-  .plans-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .step-actions {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .step-actions .btn {
+  
+  .card-footer .btn {
     width: 100%;
+  }
+  
+  .direct-write-option .alert {
+    padding: 1.5rem;
+  }
+  
+  .guide-item {
+    padding: 1rem;
+  }
+  
+  .popular-tags {
+    gap: 0.5rem;
+  }
+  
+  .clickable-tag {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0 15px;
+  }
+  
+  .page-header {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .card-body {
+    padding: 1rem;
+  }
+  
+  .card-footer {
+    padding: 0.75rem;
+  }
+  
+  .form-control,
+  .form-select {
+    font-size: 16px; /* iOS 줌 방지 */
+    padding: 0.6rem 0.8rem;
+  }
+  
+  .travel-schedule {
+    padding: 1rem;
+  }
+  
+  .day-schedule {
+    padding: 1rem;
+  }
+  
+  .attraction-item {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .visit-time {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+  }
+  
+  .selected-plan-summary {
+    padding: 1rem;
+  }
+  
+  .guide-item {
+    padding: 0.75rem;
+  }
+  
+  .popular-tags {
+    gap: 0.35rem;
+  }
+  
+  .clickable-tag {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+  }
+  
+  .btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* ===== 다크 모드 지원 ===== */
+/* @media (prefers-color-scheme: dark) {
+  .planboard-write-view {
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  }
+  
+  .card {
+    background: #2d3748;
+    color: #f7fafc;
+  }
+  
+  .card-body {
+    background: #2d3748;
+  }
+  
+  .form-control,
+  .form-select {
+    background: #4a5568;
+    border-color: #718096;
+    color: #f7fafc;
+  }
+  
+  .form-control:focus,
+  .form-select:focus {
+    background: #4a5568;
+    border-color: #3182ce;
+  }
+  
+  .day-schedule {
+    background: #4a5568;
+    border-color: #718096;
+  }
+  
+  .attraction-item {
+    background: #718096;
+    color: #f7fafc;
+  }
+  
+  .guide-item {
+    background: #4a5568;
+    color: #f7fafc;
+  }
+} */
+
+/* ===== 접근성 개선 ===== */
+.form-control:focus,
+.form-select:focus,
+.btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.clickable-tag:focus {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+}
+
+/* ===== 프린트 스타일 ===== */
+@media print {
+  .sidebar,
+  .card-footer,
+  .direct-write-option {
+    display: none;
+  }
+  
+  .card {
+    box-shadow: none;
+    border: 1px solid #dee2e6;
+  }
+  
+  .card-header {
+    background: #f8f9fa !important;
+    color: #333 !important;
+  }
+}
+
+/* ===== 고대비 모드 지원 ===== */
+@media (prefers-contrast: high) {
+  .card {
+    border: 2px solid #000;
+  }
+  
+  .form-control,
+  .form-select {
+    border: 2px solid #000;
+  }
+  
+  .btn-primary {
+    background: #000;
+    color: #fff;
+  }
+  
+  .btn-outline-secondary {
+    border: 2px solid #000;
+    color: #000;
   }
 }
 </style>
