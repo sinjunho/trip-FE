@@ -179,8 +179,16 @@ const sendMessage = async (message = null) => {
 };
 
 const scrollToBottom = () => {
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+  // 안전한 스크롤 처리
+  if (!messagesContainer.value) return;
+  
+  try {
+    // DOM 요소가 여전히 존재하는지 확인
+    if (document.contains(messagesContainer.value)) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+    }
+  } catch (error) {
+    console.warn('챗봇 스크롤 처리 실패:', error);
   }
 };
 
