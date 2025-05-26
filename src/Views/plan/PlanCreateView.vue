@@ -40,7 +40,7 @@
                   :end-date="plan.endDate"
                   @update:start-date="plan.startDate = $event"
                   @update:end-date="plan.endDate = $event"
-                  @dates-changed="handleDatesChanged"
+                  @dates-changed="onDatesChanged"
                 />
               </div>
             </div>
@@ -120,6 +120,7 @@
 
       <!-- 검색 결과 네비게이션 패널 -->
       <div class="search-results-nav" :class="{ show: attractions.length > 0, collapsed: searchResultsCollapsed }">
+        <!-- 검색 결과 헤더 대폭 개선 -->
         <div class="search-results-header" @click="toggleSearchResults">
           <div class="header-content">
             <h5>
@@ -172,14 +173,31 @@
               검색 중...
             </div>
           </div>
+          <!-- 빈 검색 결과 표시 개선 -->
           <div
-            v-else-if="attractions.length === 0 && (searchKeyword || searchContentType || searchArea)"
-            class="search-status"
+            v-if="!searchLoading && attractions.length === 0 && (searchKeyword || searchContentType || searchArea)"
+            class="no-search-results"
           >
-            <div class="no-results-status text-warning">
-              <i class="fas fa-exclamation-triangle me-2"></i>
-              검색 결과가 없습니다. 다른 조건으로 시도해보세요.
+            <div class="no-results-icon">
+              <i class="fas fa-search-location"></i>
             </div>
+            <h6>검색 결과가 없습니다</h6>
+            <p class="text-muted">
+              <span v-if="getSearchSummary()"> {{ getSearchSummary() }} 조건으로 검색된 관광지가 없습니다. </span>
+            </p>
+            <div class="search-suggestions">
+              <p class="mb-2"><strong>다음을 시도해보세요:</strong></p>
+              <ul class="suggestion-list">
+                <li>다른 키워드로 검색해보세요</li>
+                <li>카테고리를 "전체"로 변경해보세요</li>
+                <li>지역을 더 넓게 선택해보세요</li>
+                <li>검색어의 철자를 확인해보세요</li>
+              </ul>
+            </div>
+            <button class="btn btn-outline-primary mt-3" @click="clearSearchConditions">
+              <i class="fas fa-undo me-2"></i>
+              검색 조건 초기화
+            </button>
           </div>
         </div>
 
@@ -253,7 +271,7 @@
       </div>
 
       <!-- 지도 컨트롤 버튼들 -->
-      <div class="map-controls" style="display: flex">
+      <div class="map-controls">
         <button class="control-btn" @click="changeMapType" :title="mapTypeTitle">
           <i :class="mapTypeIcon"></i>
         </button>
@@ -306,13 +324,12 @@
                 <i v-else class="fas fa-spinner fa-spin"></i>
               </button>
             </div>
-            <!-- 검색 팁 개선 -->
-            <div class="search-tip">
+            <!-- 검색 팁 개선 - 인풋에 값이 없을 때만 표시 -->
+            <div v-if="!searchKeyword.trim()" class="search-tip">
               <small class="text-muted">
                 <i class="fas fa-lightbulb me-1 text-warning"></i>
                 <strong>검색 팁:</strong>
-                "전주 맛집", "부산 해변", "제주 관광지" 처럼 지역과 키워드를 함께 입력하거나, 아래 카테고리를 선택하면
-                더 정확한 검색이 가능합니다
+                "서울", "부산", 등 지역과 카테고리를 선택하면 더 정확한 검색이 가능합니다
               </small>
             </div>
           </div>
@@ -384,7 +401,7 @@
             <div v-if="loadingPopular" class="text-center py-3">
               <div class="spinner-border spinner-border-sm text-primary"></div>
             </div>
-            <div class="popular-list">
+            <div v-else class="popular-list">
               <div
                 v-for="attraction in popularAttractions.slice(0, 5)"
                 :key="attraction.no"
@@ -397,8 +414,7 @@
                   class="popular-thumb"
                 />
                 <div class="popular-info">
-                  <!-- 인기 관광지도 지역명 포함 -->
-                  <h6 class="mb-1">{{ getFormattedTitle(attraction) }}</h6>
+                  <h6 class="mb-1">{{ attraction.title }}</h6>
                   <p class="mb-0 text-muted small">{{ attraction.sido }}</p>
                 </div>
                 <button class="btn btn-sm btn-outline-primary">
@@ -452,10 +468,8 @@
               class="btn btn-sm btn-primary add-btn"
               @click="addAttractionToSelection(attractionDetail)"
               title="여행지 추가"
-              :disabled="selectedAttractions.some((s) => s.no === attractionDetail.no)"
             >
-              <i v-if="!selectedAttractions.some((s) => s.no === attractionDetail.no)" class="fas fa-plus"></i>
-              <i v-else class="fas fa-check"></i>
+              <i class="fas fa-plus"></i>
             </button>
             <button class="close-detail" @click="closeDetail">
               <i class="fas fa-times"></i>
@@ -488,16 +502,7 @@
           </div>
 
           <div class="detail-actions">
-            <button
-              class="detail-btn"
-              :class="selectedAttractions.some((s) => s.no === attractionDetail.no) ? 'added' : 'primary'"
-              @click="addAttractionToSelection(attractionDetail)"
-              :disabled="selectedAttractions.some((s) => s.no === attractionDetail.no)"
-            >
-              <i v-if="!selectedAttractions.some((s) => s.no === attractionDetail.no)" class="fas fa-plus me-1"></i>
-              <i v-else class="fas fa-check me-1"></i>
-              {{ selectedAttractions.some((s) => s.no === attractionDetail.no) ? "추가됨" : "여행지 추가" }}
-            </button>
+            <button class="detail-btn primary" @click="addAttractionToSelection(attractionDetail)">여행지 추가</button>
           </div>
         </div>
       </div>
@@ -816,31 +821,6 @@ const isStep1Valid = computed(() => {
 const unassignedAttractions = computed(() => {
   return selectedAttractions.value.filter((attr) => !attr.assignedDay);
 });
-
-// 기존 메서드들에 추가
-const getFormattedTitle = (attraction) => {
-  if (!attraction) return "";
-
-  const title = attraction.title || "";
-  const sido = attraction.sido || "";
-  const gugun = attraction.gugun || "";
-
-  // 제목에 이미 지역명이 포함되어 있는지 확인
-  const hasLocation = title.includes(sido) || title.includes(gugun);
-
-  if (hasLocation) {
-    return title;
-  }
-
-  // 지역명이 없으면 추가
-  if (sido && gugun && sido !== gugun) {
-    return `${title} (${sido} ${gugun})`;
-  } else if (sido) {
-    return `${title} (${sido})`;
-  }
-
-  return title;
-};
 
 const mapTypeTitle = computed(() => {
   switch (mapType.value) {
@@ -1251,19 +1231,10 @@ const parseSearchKeyword = (keyword) => {
     keyword: keyword,
   };
 };
-
 // 카테고리 이름을 가져오는 헬퍼 함수
 const getContentTypeName = (contentTypeId) => {
   const contentType = contentTypes.value.find((type) => type.content_type_id === contentTypeId);
   return contentType ? contentType.content_type_name : "선택된 카테고리";
-};
-
-// 페이지 변경 시 검색 재실행
-const changeSearchPage = async (page) => {
-  if (page < 1 || page > searchTotalPages.value || searchLoading.value) return;
-
-  searchCurrentPage.value = page;
-  await searchAttractions();
 };
 
 // 검색 조건 변경 감지
@@ -1292,13 +1263,6 @@ const clearSearchConditions = () => {
 
   // 기본 관광지 로드
   loadRandomAttractions();
-};
-
-//지도
-
-const selectSearchResult = (attraction) => {
-  // 지도 중심 이동 및 상세 정보 표시
-  selectAttraction(attraction);
 };
 
 // 카테고리별 아이콘 반환 함수
@@ -1354,14 +1318,30 @@ const getSearchSummary = () => {
 };
 
 let searchTimeout = null; // 디바운싱용 타이머
-// 검색 결과 초기화 함수
-const clearSearchResults = () => {
-  attractions.value = [];
-  totalCount.value = 0;
-  searchCurrentPage.value = 1;
-  searchResultsCollapsed.value = false;
+const changeSearchPage = async (page) => {
+  if (page < 1 || page > searchTotalPages.value || searchLoading.value) return;
 
-  // 기본 관광지 로드
+  searchCurrentPage.value = page;
+  await searchAttractions();
+};
+// 검색 조건 바뀌면 1페이지부터 재검색
+watch([searchKeyword, searchArea, searchGugun, searchContentType], () => {
+  searchCurrentPage.value = 1;
+  searchAttractions();
+});
+
+const selectSearchResult = (attraction) => {
+  // 지도 중심 이동 및 상세 정보 표시
+  selectAttraction(attraction);
+};
+
+const clearSearchResults = () => {
+  searchResults.value = [];
+  searchCurrentPage.value = 1;
+  searchTotalPages.value = 0;
+  searchResultsCollapsed.value = false; // 패널 상태 초기화
+
+  // 기본 관광지 다시 로드
   loadRandomAttractions();
 };
 
@@ -1756,7 +1736,7 @@ onMounted(() => {
   left: 0;
   width: 100vw;
   height: 100vh;
-  padding-top: 150px;
+  padding-top: 80px;
   padding-bottom: 80px; /* 하단 네비게이션 공간 확보 */
   box-sizing: border-box;
   overflow: hidden;
@@ -2167,14 +2147,13 @@ onMounted(() => {
   text-align: center;
 }
 
-/* 지도 컨트롤 버튼들 */
 .map-controls {
   position: fixed;
   top: 50%;
   transform: translateY(-50%);
-  right: 10px;
+  right: 20px;
   display: flex;
-  flex-direction: column; /* 세로 배치 확실히 */
+  flex-direction: column;
   gap: 8px;
   z-index: 1002;
 }
@@ -2187,13 +2166,6 @@ onMounted(() => {
   justify-content: center;
   font-size: 16px;
   color: #666;
-  position: static; /* relative에서 static으로 변경 */
-  background: white;
-  border: none;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-  cursor: pointer;
-  transition: all 0.3s ease;
 }
 
 .control-btn:hover {
@@ -2211,7 +2183,7 @@ onMounted(() => {
   top: 65px;
   left: -420px;
   width: 420px;
-  height: 1130px;
+  height: calc(100vh - 65px);
   background: white;
   z-index: 1001;
   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.1);
@@ -2390,15 +2362,13 @@ onMounted(() => {
   align-items: center;
 }
 
-/* 지도 컨테이너 크기 조정 */
 .map-container {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: calc(100% - 150px); /* 상단 여백을 위해 높이 조정 */
+  width: 95%;
+  height: 95%;
   overflow: hidden;
-  margin-top: 200px; /* 상단 여백 추가 */
 }
 
 #kakao-map {
@@ -2445,7 +2415,6 @@ onMounted(() => {
   align-items: center;
 }
 
-/* 상세정보 카드의 액션 버튼 스타일 */
 .action-btn {
   background: none;
   border: 1px solid #ddd;
@@ -2455,19 +2424,6 @@ onMounted(() => {
   font-size: 14px;
   transition: all 0.3s;
   color: #666;
-}
-
-.action-btn:hover:not(:disabled) {
-  background: #0d6efd;
-  border-color: #0d6efd;
-  color: white;
-}
-
-.action-btn:disabled {
-  background: #28a745;
-  border-color: #28a745;
-  color: white;
-  cursor: not-allowed;
 }
 
 .action-btn:hover {
@@ -2519,7 +2475,7 @@ onMounted(() => {
 .detail-actions {
   margin-top: 16px;
 }
-/* 상세정보 하단 버튼 스타일 */
+
 .detail-btn {
   width: 100%;
   padding: 10px;
@@ -2531,9 +2487,6 @@ onMounted(() => {
   text-decoration: none;
   text-align: center;
   transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .detail-btn.primary {
@@ -2545,15 +2498,6 @@ onMounted(() => {
   background: #0056b3;
 }
 
-.detail-btn.added {
-  background: #28a745;
-  color: white;
-  cursor: not-allowed;
-}
-
-.detail-btn.added:hover {
-  background: #28a745;
-}
 /* Step 3 스타일 */
 .day-header {
   display: flex;
@@ -2663,6 +2607,304 @@ onMounted(() => {
   .detail-card {
     width: 320px;
   }
+}
+
+@media (max-width: 768px) {
+  .map-selection-view {
+    padding-top: 60px;
+    padding-bottom: 70px; /* 모바일에서 하단 네비게이션 공간 */
+  }
+
+  .bottom-navigation {
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 15px;
+  }
+
+  .selected-count {
+    order: -1; /* 맨 위로 이동 */
+    margin-bottom: 5px;
+  }
+
+  .step-back-btn,
+  .step-next-btn {
+    padding: 8px 16px;
+    font-size: 14px;
+    flex: 1;
+    max-width: 150px;
+  }
+
+  .search-panel {
+    width: 100vw;
+    left: -100vw;
+    top: 60px;
+    height: calc(100vh - 130px); /* 하단 네비게이션 공간 확보 */
+  }
+
+  .search-panel.panel-open {
+    left: 0;
+  }
+
+  .search-panel-toggle.active {
+    left: calc(100vw - 100px);
+  }
+
+  .detail-card {
+    width: calc(100vw - 20px);
+    bottom: 90px; /* 하단 네비게이션 위로 */
+    right: 10px;
+    left: 10px;
+  }
+
+  .search-results-nav {
+    left: 10px;
+    right: 10px;
+    bottom: 90px; /* 모바일에서 하단 네비게이션 위 */
+    max-height: 40vh;
+  }
+
+  .search-results-list {
+    max-height: calc(40vh - 100px);
+  }
+
+  .map-controls {
+    right: 10px;
+    top: 40%;
+  }
+
+  .search-panel-toggle {
+    background: rgba(255, 255, 255, 0.7); /* 흰색, 70% 불투명 */
+    left: 10px;
+    top: 70px;
+  }
+
+  .steps-container {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .step-line {
+    width: 2px;
+    height: 30px;
+    margin: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .bottom-navigation {
+    padding: 8px 10px;
+  }
+
+  .step-back-btn,
+  .step-next-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .selected-count {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+
+  .search-results-nav {
+    left: 5px;
+    right: 5px;
+    bottom: 70px;
+    max-height: 35vh;
+  }
+
+  .search-results-header {
+    padding: 12px 15px;
+  }
+
+  .search-results-header h5 {
+    font-size: 0.9rem;
+  }
+
+  .search-results-list {
+    padding: 8px;
+    max-height: calc(35vh - 90px);
+  }
+
+  .search-result-item {
+    padding: 10px;
+  }
+
+  .result-thumb {
+    width: 50px;
+    height: 38px;
+    margin-right: 10px;
+  }
+
+  .result-title {
+    font-size: 0.85rem;
+  }
+
+  .result-location {
+    font-size: 0.75rem;
+  }
+
+  .search-panel-content {
+    padding: 0;
+  }
+
+  .search-section {
+    padding: 8px 12px;
+  }
+
+  .detail-card-content {
+    padding: 12px;
+  }
+
+  .search-panel-toggle {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+
+  .control-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 14px;
+  }
+
+  .detail-card {
+    max-height: 60vh; /* 하단 네비게이션 고려 */
+    bottom: 70px;
+  }
+}
+
+/* 커스텀 스크롤바 */
+.search-panel-content::-webkit-scrollbar,
+.detail-card::-webkit-scrollbar,
+.popular-list::-webkit-scrollbar,
+.selected-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.search-panel-content::-webkit-scrollbar-track,
+.detail-card::-webkit-scrollbar-track,
+.popular-list::-webkit-scrollbar-track,
+.selected-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.search-panel-content::-webkit-scrollbar-thumb,
+.detail-card::-webkit-scrollbar-thumb,
+.popular-list::-webkit-scrollbar-thumb,
+.selected-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.search-panel-content::-webkit-scrollbar-thumb:hover,
+.detail-card::-webkit-scrollbar-thumb:hover,
+.popular-list::-webkit-scrollbar-thumb:hover,
+.selected-list::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 애니메이션 효과 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.detail-card {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.search-panel.panel-open {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* 포커스 스타일 개선 */
+.search-input:focus,
+.search-select:focus {
+  outline: none;
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* 선택된 관광지 강조 */
+.selected-item {
+  background: #e9f0ff;
+  border-color: #0d6efd;
+}
+
+/* 로딩 상태 */
+.spinner-border-sm {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* 지도 마커 호버 효과 */
+.map-container .marker:hover {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}
+
+/* 검색 결과 하이라이트 */
+.popular-item.selected {
+  background: #e9f0ff;
+  border-color: #0d6efd;
+}
+
+/* 상태별 색상 */
+.text-success {
+  color: #28a745 !important;
+}
+
+.text-danger {
+  color: #dc3545 !important;
+}
+
+.text-warning {
+  color: #ffc107 !important;
+}
+
+.text-info {
+  color: #17a2b8 !important;
+}
+
+.text-primary {
+  color: #0d6efd !important;
+}
+
+/* 버튼 상태 */
+.btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* 카드 호버 효과 */
+.card:hover {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease;
+}
+
+/* 입력 필드 검증 */
+.form-control:invalid {
+  border-color: #dc3545;
+}
+
+.form-control:valid {
+  border-color: #28a745;
 }
 
 /* 검색 팁 스타일 개선 */
@@ -2957,325 +3199,6 @@ onMounted(() => {
 
   .suggestion-list {
     font-size: 0.85rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .map-selection-view {
-    padding-top: 60px;
-    padding-bottom: 70px; /* 모바일에서 하단 네비게이션 공간 */
-  }
-
-  .bottom-navigation {
-    flex-direction: column;
-    gap: 10px;
-    padding: 10px 15px;
-  }
-
-  .selected-count {
-    order: -1; /* 맨 위로 이동 */
-    margin-bottom: 5px;
-  }
-
-  .step-back-btn,
-  .step-next-btn {
-    padding: 8px 16px;
-    font-size: 14px;
-    flex: 1;
-    max-width: 150px;
-  }
-
-  .search-panel {
-    width: 100vw;
-    left: -100vw;
-    top: 60px;
-    height: calc(100vh - 130px); /* 하단 네비게이션 공간 확보 */
-  }
-
-  .search-panel.panel-open {
-    left: 0;
-  }
-
-  .search-panel-toggle.active {
-    left: calc(100vw - 100px);
-  }
-
-  .detail-card {
-    width: calc(100vw - 20px);
-    bottom: 90px; /* 하단 네비게이션 위로 */
-    right: 10px;
-    left: 10px;
-  }
-
-  .search-results-nav {
-    left: 10px;
-    right: 10px;
-    bottom: 90px; /* 모바일에서 하단 네비게이션 위 */
-    max-height: 40vh;
-  }
-
-  .search-results-list {
-    max-height: calc(40vh - 100px);
-  }
-
-  .map-controls {
-    right: 10px;
-    top: 40%;
-  }
-
-  .search-panel-toggle {
-    background: rgba(255, 255, 255, 0.7); /* 흰색, 70% 불투명 */
-    top: 160px; /* 기존 90px에서 160px로 조정 */
-    left: 20px;
-    /* 나머지 스타일은 그대로 유지 */
-  }
-
-  .steps-container {
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .step-line {
-    width: 2px;
-    height: 30px;
-    margin: 0;
-  }
-}
-
-@media (max-width: 480px) {
-  .bottom-navigation {
-    padding: 8px 10px;
-  }
-
-  .step-back-btn,
-  .step-next-btn {
-    padding: 8px 12px;
-    font-size: 13px;
-  }
-
-  .selected-count {
-    font-size: 13px;
-    padding: 6px 12px;
-  }
-
-  .search-results-nav {
-    left: 5px;
-    right: 5px;
-    bottom: 70px;
-    max-height: 35vh;
-  }
-
-  .search-results-header {
-    padding: 12px 15px;
-  }
-
-  .search-results-header h5 {
-    font-size: 0.9rem;
-  }
-
-  .search-results-list {
-    padding: 8px;
-    max-height: calc(35vh - 90px);
-  }
-
-  .search-result-item {
-    padding: 10px;
-  }
-
-  .result-thumb {
-    width: 50px;
-    height: 38px;
-    margin-right: 10px;
-  }
-
-  .result-title {
-    font-size: 0.85rem;
-  }
-
-  .result-location {
-    font-size: 0.75rem;
-  }
-
-  .search-panel-content {
-    padding: 0;
-  }
-
-  .search-section {
-    padding: 8px 12px;
-  }
-
-  .detail-card-content {
-    padding: 12px;
-  }
-
-  .search-panel-toggle {
-    padding: 10px 12px;
-    font-size: 14px;
-  }
-
-  .control-btn {
-    width: 44px;
-    height: 44px;
-    font-size: 14px;
-  }
-
-  .detail-card {
-    max-height: 60vh; /* 하단 네비게이션 고려 */
-    bottom: 70px;
-  }
-}
-
-/* 커스텀 스크롤바 */
-.search-panel-content::-webkit-scrollbar,
-.detail-card::-webkit-scrollbar,
-.popular-list::-webkit-scrollbar,
-.selected-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.search-panel-content::-webkit-scrollbar-track,
-.detail-card::-webkit-scrollbar-track,
-.popular-list::-webkit-scrollbar-track,
-.selected-list::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.search-panel-content::-webkit-scrollbar-thumb,
-.detail-card::-webkit-scrollbar-thumb,
-.popular-list::-webkit-scrollbar-thumb,
-.selected-list::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.search-panel-content::-webkit-scrollbar-thumb:hover,
-.detail-card::-webkit-scrollbar-thumb:hover,
-.popular-list::-webkit-scrollbar-thumb:hover,
-.selected-list::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-/* 애니메이션 효과 */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.detail-card {
-  animation: fadeIn 0.4s ease-out;
-}
-
-.search-panel.panel-open {
-  animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
-/* 포커스 스타일 개선 */
-.search-input:focus,
-.search-select:focus {
-  outline: none;
-  border-color: #0d6efd;
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-}
-
-/* 선택된 관광지 강조 */
-.selected-item {
-  background: #e9f0ff;
-  border-color: #0d6efd;
-}
-
-/* 로딩 상태 */
-.spinner-border-sm {
-  width: 1rem;
-  height: 1rem;
-}
-
-/* 지도 마커 호버 효과 */
-.map-container .marker:hover {
-  transform: scale(1.1);
-  transition: transform 0.2s ease;
-}
-
-/* 검색 결과 하이라이트 */
-.popular-item.selected {
-  background: #e9f0ff;
-  border-color: #0d6efd;
-}
-
-/* 상태별 색상 */
-.text-success {
-  color: #28a745 !important;
-}
-
-.text-danger {
-  color: #dc3545 !important;
-}
-
-.text-warning {
-  color: #ffc107 !important;
-}
-
-.text-info {
-  color: #17a2b8 !important;
-}
-
-.text-primary {
-  color: #0d6efd !important;
-}
-
-/* 버튼 상태 */
-.btn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-/* 카드 호버 효과 */
-.card:hover {
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.3s ease;
-}
-
-/* 입력 필드 검증 */
-.form-control:invalid {
-  border-color: #dc3545;
-}
-
-.form-control:valid {
-  border-color: #28a745;
-}
-
-/* 모바일 반응형에서도 조정 */
-@media (max-width: 768px) {
-  .map-controls {
-    right: 15px; /* 모바일에서는 15px */
-    top: 40%;
-  }
-
-  .control-btn {
-    width: 44px;
-    height: 44px;
-    font-size: 14px;
-  }
-}
-
-@media (max-width: 480px) {
-  .map-controls {
-    right: 10px; /* 더 작은 화면에서는 10px */
   }
 }
 </style>
