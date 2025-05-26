@@ -26,9 +26,10 @@
               @selection-cancelled="handleSelectionCancelled"
             />
           </div>
-
+          
           <!-- 게시글 작성 폼 -->
           <div v-if="selectedPlan || isEdit || showDirectWrite" class="write-form">
+             
             <form @submit.prevent="handleSubmit">
               <div class="card">
                 <div class="card-header bg-light">
@@ -127,20 +128,27 @@
                       />
                     </div>
                     <div class="col-md-4">
-                      <label for="travelDuration" class="form-label">
-                        <i class="fas fa-clock me-1"></i>
-                        여행 기간 (일)
-                      </label>
-                      <input
-                        type="number"
-                        id="travelDuration"
-                        v-model.number="form.travelDuration"
-                        class="form-control"
-                        min="1"
-                        max="365"
-                        placeholder="일수"
-                      />
-                    </div>
+  <label for="travelDuration" class="form-label">
+    <i class="fas fa-clock me-1"></i>
+    여행 기간 (일)
+  </label>
+  <input
+    type="number"
+    id="travelDuration"
+    v-model.number="form.travelDuration"
+    class="form-control"
+    :class="{ 'readonly-input': selectedPlan }"
+    min="1"
+    max="365"
+    placeholder="일수"
+    :readonly="selectedPlan"
+    :title="selectedPlan ? '선택된 여행 계획의 일수입니다' : ''"
+  />
+  <div v-if="selectedPlan" class="form-text text-info">
+    <i class="fas fa-info-circle me-1"></i>
+    선택된 여행 계획의 일수
+  </div>
+</div>
                   </div>
 
                   <div class="row mb-4">
@@ -230,20 +238,7 @@
                     <div class="form-text">{{ form.content.length }}/5000자</div>
                   </div>
 
-                  <!-- 태그 입력 -->
-                  <div class="mb-4">
-                    <label class="form-label">
-                      <i class="fas fa-tags me-1"></i>
-                      태그
-                    </label>
-                    <PlanBoardTags
-                      :tags="tagList"
-                      :editable="true"
-                      @tag-add="addTag"
-                      @tag-remove="removeTag"
-                      @tags-updated="updateTags"
-                    />
-                  </div>
+                 
                 </div>
 
                 <!-- 폼 액션 버튼 -->
@@ -285,7 +280,35 @@
                   </div>
                 </div>
               </div>
+              
             </form>
+            <div class="card"><div class="card-header bg-light">
+                  <h5 class="mb-0">
+                    <i class="fas fa-tags me-1"></i>
+                    태그 추가
+                  </h5>
+                </div>      
+                <div class="card-body">
+
+                  <!-- 태그 입력 -->
+             <div class="mb-4">
+  <label class="form-label">
+    <i class="fas fa-tags me-1"></i>
+    태그
+  </label>
+  <PlanBoardTags
+    :tags="tagList"
+    :editable="true"
+    :removable="true"
+    @tag-add="addTag"
+    @tag-remove="removeTag"
+    @tags-updated="updateTags"
+  />
+</div>
+                  </div>
+              
+              
+              </div>
           </div>
 
           <!-- 직접 작성 옵션 (여행 계획이 없는 경우) -->
@@ -477,14 +500,18 @@ const startDirectWrite = () => {
 };
 
 const addTag = (tagName) => {
-  if (!tagList.value.find(tag => tag.tagName === tagName)) {
-    tagList.value.push({ tagName, useCount: 1 });
+  if (!tagName || !tagName.trim()) return;
+  
+  const trimmedTag = tagName.trim();
+  if (!tagList.value.find(tag => tag.tagName === trimmedTag)) {
+    tagList.value.push({ tagName: trimmedTag, useCount: 1 });
     updateTagNames();
   }
 };
 
 const removeTag = (tag) => {
-  const index = tagList.value.findIndex(t => t.tagName === tag.tagName);
+  const tagName = typeof tag === 'string' ? tag : tag.tagName;
+  const index = tagList.value.findIndex(t => t.tagName === tagName);
   if (index > -1) {
     tagList.value.splice(index, 1);
     updateTagNames();
@@ -492,12 +519,22 @@ const removeTag = (tag) => {
 };
 
 const updateTags = (newTags) => {
-  tagList.value = newTags;
+  tagList.value = [...newTags];
   updateTagNames();
 };
 
 const addPopularTag = (tagName) => {
-  addTag(tagName);
+  // 이벤트 전파 방지
+  event?.stopPropagation();
+  event?.preventDefault();
+  
+  if (!tagName || !tagName.trim()) return;
+  
+  const trimmedTag = tagName.trim();
+  if (!tagList.value.find(tag => tag.tagName === trimmedTag)) {
+    tagList.value.push({ tagName: trimmedTag, useCount: 1 });
+    updateTagNames();
+  }
 };
 
 const updateTagNames = () => {
@@ -1497,49 +1534,6 @@ textarea.form-control {
   }
 }
 
-/* ===== 다크 모드 지원 ===== */
-/* @media (prefers-color-scheme: dark) {
-  .planboard-write-view {
-    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-  }
-  
-  .card {
-    background: #2d3748;
-    color: #f7fafc;
-  }
-  
-  .card-body {
-    background: #2d3748;
-  }
-  
-  .form-control,
-  .form-select {
-    background: #4a5568;
-    border-color: #718096;
-    color: #f7fafc;
-  }
-  
-  .form-control:focus,
-  .form-select:focus {
-    background: #4a5568;
-    border-color: #3182ce;
-  }
-  
-  .day-schedule {
-    background: #4a5568;
-    border-color: #718096;
-  }
-  
-  .attraction-item {
-    background: #718096;
-    color: #f7fafc;
-  }
-  
-  .guide-item {
-    background: #4a5568;
-    color: #f7fafc;
-  }
-} */
 
 /* ===== 접근성 개선 ===== */
 .form-control:focus,
@@ -1593,5 +1587,42 @@ textarea.form-control {
     border: 2px solid #000;
     color: #000;
   }
+}
+/* readonly 입력 필드 스타일 */
+.readonly-input {
+  background-color: #f8f9fa !important;
+  border-color: #e9ecef !important;
+  cursor: not-allowed;
+  color: #6c757d !important;
+}
+
+.readonly-input:focus {
+  background-color: #f8f9fa !important;
+  border-color: #e9ecef !important;
+  box-shadow: none !important;
+}
+
+/* 태그 클릭 방지 */
+.clickable-tag {
+  position: relative;
+  z-index: 1;
+}
+
+.clickable-tag:focus {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+}
+
+/* 폼 텍스트 정보 스타일 */
+.form-text.text-info {
+  color: #0dcaf0 !important;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+.form-text.text-info i {
+  color: #0dcaf0;
 }
 </style>
