@@ -1584,10 +1584,25 @@ const startDrag = (attraction) => {
   // 드래그 시작
 };
 
+// PlanCreateView.vue의 savePlan 함수를 다음으로 완전히 교체하세요
+
 const savePlan = async () => {
   try {
     isSaving.value = true;
 
+    // 계획 데이터 검증
+    if (!plan.value.title || !plan.value.startDate || !plan.value.endDate) {
+      alert("여행 제목, 시작일, 종료일은 필수 입력 항목입니다.");
+      return;
+    }
+
+    if (selectedAttractions.value.length === 0) {
+      if (!confirm("선택된 관광지가 없습니다. 그래도 저장하시겠습니까?")) {
+        return;
+      }
+    }
+
+    // 계획 데이터 구성
     const planData = {
       title: plan.value.title,
       description: plan.value.description,
@@ -1596,6 +1611,7 @@ const savePlan = async () => {
       details: [],
     };
 
+    // 선택된 관광지들을 세부 일정으로 변환
     selectedAttractions.value.forEach((attraction) => {
       if (attraction.assignedDay) {
         planData.details.push({
@@ -1610,13 +1626,68 @@ const savePlan = async () => {
       }
     });
 
+    console.log("저장할 계획 데이터:", planData);
+
+    // API 호출하여 계획 저장
     const response = await planAPI.createPlan(planData);
 
-    alert("여행 계획이 성공적으로 저장되었습니다! 🎉");
-    router.push(`/plans/${response.data.planId}`);
+    console.log("계획 저장 응답:", response);
+
+    // 성공 메시지 표시
+    const successMessage = `✨ 여행 계획 "${plan.value.title}"이(가) 성공적으로 저장되었습니다! 🎉`;
+
+    // 성공 알림과 함께 선택 옵션 제공
+    const userChoice = confirm(
+      `${successMessage}\n\n방금 만든 여행 계획을 바로 확인하시겠습니까?\n\n` +
+        `✅ 확인: 계획 상세 페이지로 이동\n` +
+        `❌ 취소: 계획 목록 페이지로 이동`
+    );
+
+    // 생성된 계획의 ID 추출
+    let createdPlanId;
+
+    if (response.data && response.data.planId) {
+      createdPlanId = response.data.planId;
+    } else if (response.data && typeof response.data === "number") {
+      createdPlanId = response.data;
+    } else {
+      console.warn("계획 ID를 찾을 수 없습니다. 응답 데이터:", response.data);
+      // ID를 찾을 수 없으면 목록으로 이동
+      router.push("/plans");
+      return;
+    }
+
+    console.log("생성된 계획 ID:", createdPlanId);
+
+    // 사용자 선택에 따라 이동
+    if (userChoice) {
+      // 상세 페이지로 이동
+      router.push(`/plans/${createdPlanId}`);
+    } else {
+      // 목록 페이지로 이동
+      router.push("/plans");
+    }
   } catch (error) {
     console.error("여행 계획 저장 오류:", error);
-    alert("여행 계획 저장에 실패했습니다. 다시 시도해주세요.");
+
+    // 구체적인 에러 메시지 제공
+    let errorMessage = "여행 계획 저장에 실패했습니다.";
+
+    if (error.response) {
+      if (error.response.status === 401) {
+        errorMessage = "로그인이 필요합니다. 다시 로그인해주세요.";
+        router.push("/login");
+        return;
+      } else if (error.response.status === 403) {
+        errorMessage = "여행 계획을 저장할 권한이 없습니다.";
+      } else if (error.response.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+
+    alert(`❌ ${errorMessage}\n\n다시 시도해주세요.`);
   } finally {
     isSaving.value = false;
   }
