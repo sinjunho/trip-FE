@@ -11,7 +11,7 @@
           <li>
             <router-link :to="{ name: 'attractions' }">관광지 검색</router-link>
           </li>
-          <li><router-link :to="{ name: 'board-list' }">여행 커뮤니티</router-link></li>
+          <li><router-link :to="{ name: 'board-list' }">게시판</router-link></li>
           <li v-if="isLoggedIn">
             <router-link :to="{ name: 'plans' }">내 여행 계획 보기</router-link>
           </li>
