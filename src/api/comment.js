@@ -2,14 +2,14 @@
 import apiClient from "./index";
 
 export default {
-  // 게시글별 댓글 목록 조회
-  getCommentsByBoard(bno) {
-    return apiClient.get(`/comments/board/${bno}`);
-  },
-
   // 댓글 작성
   createComment(commentData) {
     return apiClient.post("/comments", commentData);
+  },
+
+  // 게시글 댓글 조회
+  getCommentsByBoard(boardId) {
+    return apiClient.get(`/comments/board/${boardId}`);
   },
 
   // 댓글 수정
