@@ -230,7 +230,7 @@ defineExpose({
 <style scoped>
 .chatbot-container {
   position: fixed;
-  bottom: 20px;
+  bottom: 85px;
   right: 20px;
   z-index: 1000;
   font-family: "Noto Sans KR", sans-serif;
