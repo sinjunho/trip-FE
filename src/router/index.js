@@ -106,6 +106,35 @@ const router = createRouter({
       component: () => import("../views/admin/DashboardView.vue"),
       meta: { requiresAuth: true, requiresAdmin: true },
     },
+    // 기존 routes 배열에 다음 라우트들을 추가하세요:
+
+    {
+      path: "/planboard",
+      name: "planboard-list",
+      component: () => import("../Views/planbaord/PlanBoardListView.vue"),
+    },
+    {
+      path: "/planboard/search",
+      name: "planboard-search",
+      component: () => import("../Views/planbaord/PlanBoardSearchView.vue"),
+    },
+    {
+      path: "/planboard/:pboardNo",
+      name: "planboard-detail",
+      component: () => import("../Views/planbaord/PlanBoardDetailView.vue"),
+    },
+    {
+      path: "/planboard/write",
+      name: "planboard-write",
+      component: () => import("../Views/planbaord/PlanBoardWriteView.vue"),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: "/planboard/edit/:pboardNo",
+      name: "planboard-edit",
+      component: () => import("../Views/planbaord/PlanBoardWriteView.vue"),
+      meta: { requiresAuth: true },
+    },
   ],
   scrollBehavior() {
     // 페이지 전환 시 맨 위로 스크롤

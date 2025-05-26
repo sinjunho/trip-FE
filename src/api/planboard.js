@@ -1,3 +1,4 @@
+// src/api/planboard.js
 import apiClient from "./index";
 
 export default {
@@ -53,16 +54,48 @@ export default {
 
   // 인기 태그 목록 조회
   getPopularTags(limit = 10) {
-    return apiClient.get(`/planboards/tags/popular`, { params: { limit } });
+    return apiClient.get("/planboards/tags/popular", { params: { limit } });
   },
 
   // 추천 게시글 목록 조회
   getFeaturedPlanBoards(limit = 6) {
-    return apiClient.get(`/planboards/featured`, { params: { limit } });
+    return apiClient.get("/planboards/featured", { params: { limit } });
   },
 
   // 인기 게시글 목록 조회
   getPopularPlanBoards(limit = 6) {
-    return apiClient.get(`/planboards/popular`, { params: { limit } });
+    return apiClient.get("/planboards/popular", { params: { limit } });
+  },
+
+  // 태그별 게시글 목록 조회
+  getPlanBoardsByTag(tagName, offset = 0, limit = 10) {
+    return apiClient.get(`/planboards/tags/${encodeURIComponent(tagName)}`, {
+      params: { offset, limit },
+    });
+  },
+
+  // 사용자별 게시글 목록 조회
+  getUserPlanBoards(userId, offset = 0, limit = 10) {
+    return apiClient.get(`/planboards/user/${userId}`, {
+      params: { offset, limit },
+    });
+  },
+
+  // 게시글 검색
+  searchPlanBoards(searchParams) {
+    const { keyword, searchType = "all", offset = 0, limit = 10 } = searchParams;
+    return apiClient.get("/planboards/search", {
+      params: { keyword, searchType, offset, limit },
+    });
+  },
+
+  // 여행 테마별 통계 조회
+  getTravelThemeStatistics() {
+    return apiClient.get("/planboards/statistics/themes");
+  },
+
+  // 월별 게시글 통계 조회
+  getMonthlyStatistics(year = new Date().getFullYear()) {
+    return apiClient.get("/planboards/statistics/monthly", { params: { year } });
   },
 };
