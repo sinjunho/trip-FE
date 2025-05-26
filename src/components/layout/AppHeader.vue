@@ -27,11 +27,6 @@
 
           <!-- 로그인한 경우 -->
           <template v-else>
-            <!-- 관리자인 경우 (여기에 로그 추가) -->
-            <li v-if="isAdmin">
-              <router-link :to="{ name: 'admin-members' }">회원 관리</router-link>
-            </li>
-
             <!-- 사용자 메뉴 -->
             <li class="user-menu">
               <button class="user-menu-btn" @click="toggleUserMenu">
