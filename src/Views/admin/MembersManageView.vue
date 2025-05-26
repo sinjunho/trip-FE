@@ -44,7 +44,7 @@
                 <label>권한</label>
                 <select v-model="roleFilter" class="form-select">
                   <option value="">전체</option>
-                  <option value="user">일반회원</option>
+                  <option value="member">일반회원</option>
                   <option value="admin">관리자</option>
                 </select>
               </div>
@@ -66,7 +66,7 @@
         <div class="card-header py-3 d-flex justify-content-between align-items-center">
           <h6 class="m-0 font-weight-bold text-primary">회원 목록 ({{ memberPage.totalItems }}명)</h6>
           <div class="d-flex gap-2">
-            <span class="badge bg-primary">일반회원: {{ userCount }}명</span>
+            <span class="badge bg-primary">일반회원: {{ memberCount }}명</span>
             <span class="badge bg-danger">관리자: {{ adminCount }}명</span>
           </div>
         </div>
@@ -80,7 +80,7 @@
           </div>
 
           <div v-else-if="memberPage.list.length === 0" class="text-center py-5 text-muted">
-            <i class="fas fa-users fa-3x mb-3"></i>
+            <i class="fas fa-members fa-3x mb-3"></i>
             <p>조건에 맞는 회원이 없습니다.</p>
           </div>
 
@@ -96,7 +96,7 @@
                   <th>주소</th>
                   <th>전화번호</th>
                   <th>권한</th>
-                  <th>가입일</th>
+
                   <th>관리</th>
                 </tr>
               </thead>
@@ -111,7 +111,7 @@
                       type="checkbox"
                       :value="member.id"
                       v-model="selectedMembers"
-                      :disabled="member.id === currentUserId"
+                      :disabled="member.id === currentmemberId"
                       class="form-check-input"
                     />
                   </td>
@@ -134,21 +134,17 @@
                   <td>{{ member.tel || "-" }}</td>
                   <td>
                     <select
-                      :value="member.role || 'user'"
+                      :value="member.role || 'member'"
                       @change="changeRole(member.id, $event.target.value)"
-                      :disabled="member.id === currentUserId"
+                      :disabled="member.id === currentmemberId"
                       class="form-select form-select-sm"
                       :class="member.role === 'admin' ? 'text-danger' : 'text-primary'"
                     >
-                      <option value="user">일반회원</option>
+                      <option value="member">일반회원</option>
                       <option value="admin">관리자</option>
                     </select>
                   </td>
-                  <td>
-                    <span class="text-muted" style="font-size: 0.875rem">
-                      {{ formatDate(member.mno) }}
-                    </span>
-                  </td>
+
                   <td>
                     <div class="btn-group" role="group">
                       <button class="btn btn-sm btn-outline-info" @click="viewMemberDetail(member)" title="상세보기">
@@ -157,7 +153,7 @@
                       <button
                         class="btn btn-sm btn-outline-danger"
                         @click="confirmDeleteMember(member)"
-                        :disabled="member.id === currentUserId"
+                        :disabled="member.id === currentmemberId"
                         title="삭제"
                       >
                         <i class="fas fa-trash"></i>
@@ -179,8 +175,8 @@
               {{ selectedMembers.length }}명이 선택되었습니다.
             </div>
             <div class="btn-group">
-              <button class="btn btn-sm btn-warning" @click="bulkChangeRole('user')">
-                <i class="fas fa-user me-1"></i>일반회원으로 변경
+              <button class="btn btn-sm btn-warning" @click="bulkChangeRole('member')">
+                <i class="fas fa-member me-1"></i>일반회원으로 변경
               </button>
               <button class="btn btn-sm btn-danger" @click="bulkDeleteMembers">
                 <i class="fas fa-trash me-1"></i>선택 삭제
@@ -308,8 +304,8 @@ const selectAll = ref(false);
 const selectedMember = ref(null);
 
 // 계산된 속성
-const currentUserId = computed(() => authStore.user?.id);
-const userCount = computed(() => memberPage.value.list.filter((m) => !m.role || m.role === "user").length);
+const currentmemberId = computed(() => authStore.member?.id);
+const memberCount = computed(() => memberPage.value.list.filter((m) => !m.role || m.role === "member").length);
 const adminCount = computed(() => memberPage.value.list.filter((m) => m.role === "admin").length);
 
 const displayPages = computed(() => {
@@ -344,8 +340,8 @@ const loadMembers = async () => {
     // 권한 필터 적용
     if (roleFilter.value) {
       memberPage.value.list = memberPage.value.list.filter((member) => {
-        if (roleFilter.value === "user") {
-          return !member.role || member.role === "user";
+        if (roleFilter.value === "member") {
+          return !member.role || member.role === "member";
         }
         return member.role === roleFilter.value;
       });
@@ -383,7 +379,7 @@ const changePage = (page) => {
 const toggleSelectAll = () => {
   if (selectAll.value) {
     selectedMembers.value = memberPage.value.list
-      .filter((member) => member.id !== currentUserId.value)
+      .filter((member) => member.id !== currentmemberId.value)
       .map((member) => member.id);
   } else {
     selectedMembers.value = [];
@@ -391,7 +387,7 @@ const toggleSelectAll = () => {
 };
 
 const changeRole = async (memberId, newRole) => {
-  if (memberId === currentUserId.value) {
+  if (memberId === currentmemberId.value) {
     alert("자신의 권한은 변경할 수 없습니다.");
     return;
   }
@@ -412,13 +408,24 @@ const changeRole = async (memberId, newRole) => {
 };
 
 const confirmDeleteMember = (member) => {
-  if (member.id === currentUserId.value) {
+  if (member.id === currentmemberId.value) {
     alert("자신의 계정은 삭제할 수 없습니다.");
     return;
   }
 
   if (confirm(`정말로 '${member.name}(${member.id})' 회원을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
     deleteMember(member.id);
+  }
+};
+
+const deleteMember = async (memberId) => {
+  try {
+    await apiClient.delete(`/admin/members/${memberId}`);
+    alert("회원이 성공적으로 삭제되었습니다.");
+    loadMembers();
+  } catch (error) {
+    console.error("회원 삭제 중 오류:", error);
+    alert("회원 삭제에 실패했습니다.");
   }
 };
 

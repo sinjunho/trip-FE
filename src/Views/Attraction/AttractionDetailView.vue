@@ -111,6 +111,7 @@
           <button v-if="authStore.isAuthenticated" class="btn btn-primary me-2" @click="addToPlan">
             <i class="fas fa-plus"></i> 여행 계획에 추가
           </button>
+
           <router-link v-if="authStore.isAuthenticated" to="/plans" class="btn btn-outline-secondary me-2">
             <i class="fas fa-map"></i> 내 여행 계획 보기
           </router-link>
@@ -162,9 +163,27 @@
                 </router-link>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
               </div>
+              >
             </div>
           </div>
         </div>
+
+        <!-- 댓글 섹션 -->
+        <div class="comments-section mt-4">
+          <div class="card">
+            <div class="card-header bg-light">
+              <h4 class="mb-0">
+                <i class="fas fa-comments text-primary me-2"></i>
+                방문 후기 및 댓글
+              </h4>
+              <small class="text-muted">이 관광지에 대한 경험과 후기를 공유해주세요!</small>
+            </div>
+            <div class="card-body p-0">
+              <CommentSection :board-no="attraction.no" ref="commentSection" />
+            </div>
+          </div>
+        </div>
+
         <!-- 돌아가기 버튼 -->
         <div class="mt-4">
           <router-link to="/attractions" class="btn btn-secondary">
@@ -182,6 +201,8 @@ import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import planAPI from "@/api/plan";
 import attractionAPI from "@/api/attraction";
+// 기존 import 문들 뒤에 추가
+import CommentSection from "@/components/board/CommentSection.vue";
 
 // 2. 그 다음에 store와 router 등의 초기화를 합니다
 const route = useRoute();
