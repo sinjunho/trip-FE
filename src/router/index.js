@@ -148,13 +148,86 @@ const router = createRouter({
       name: "planboard-edit",
       component: () => import("../Views/planbaord/PlanBoardWriteView.vue"),
       meta: { requiresAuth: true },
+    },// 공지사항 관련 라우트 추가
+    {
+      path: "/notices",
+      name: "notice-list",
+      component: () => import("@/views/notice/NoticeListView.vue"),
+    },
+    {
+      path: "/notices/:nno",
+      name: "notice-detail",
+      component: () => import("@/views/notice/NoticeDetailView.vue"),
+    },
+    {
+      path: "/notices/write",
+      name: "notice-write",
+      component: () => import("@/views/notice/NoticeWriteView.vue"),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
+      path: "/notices/edit/:nno",
+      name: "notice-edit",
+      component: () => import("@/views/notice/NoticeWriteView.vue"),
+      meta: { requiresAuth: true, requiresAdmin: true },
     },
   ],
-  scrollBehavior() {
-    // 페이지 전환 시 맨 위로 스크롤
-    return { top: 0 };
+  // 스크롤 동작 수정 - 안전한 스크롤 처리
+  scrollBehavior(to, from, savedPosition) {
+    return new Promise((resolve) => {
+      // nextTick을 사용해 DOM이 완전히 렌더링된 후 스크롤 처리
+      setTimeout(() => {
+        if (savedPosition) {
+          resolve(savedPosition);
+        } else if (to.hash) {
+          // 해시가 있는 경우 해당 요소로 스크롤
+          const element = document.querySelector(to.hash);
+          if (element) {
+            resolve({
+              el: to.hash,
+              behavior: 'smooth',
+            });
+          } else {
+            resolve({ top: 0 });
+          }
+        } else {
+          // 페이지 맨 위로 스크롤
+          resolve({ top: 0 });
+        }
+      }, 100); // 100ms 지연으로 DOM 렌더링 대기
+    });
   },
 });
+
+// 네비게이션 가드에서도 안전 처리 추가
+router.beforeEach((to, from, next) => {
+  const isLoggedIn = localStorage.getItem("auth-token") !== null;
+
+  // 인증이 필요한 페이지 처리
+  if (to.meta.requiresAuth && !isLoggedIn) {
+    next({ name: "login", query: { redirect: to.fullPath } });
+    return;
+  }
+
+  // 관리자 권한이 필요한 페이지 처리
+  if (to.meta.requiresAdmin && !isLoggedIn) {
+    next({ name: "login", query: { redirect: to.fullPath } });
+    return;
+  }
+
+  next();
+});
+
+// 네비게이션 에러 처리 추가
+router.onError((error) => {
+  console.error('Router Error:', error);
+  // 에러가 발생해도 페이지가 계속 작동하도록 처리
+  if (error.message.includes('parentNode')) {
+    // parentNode 관련 에러는 무시하고 계속 진행
+    return;
+  }
+});
+
 
 // // 네비게이션 가드 강화
 // router.beforeEach(async (to, from, next) => {
