@@ -97,13 +97,27 @@ const router = createRouter({
     {
       path: "/admin/members",
       name: "admin-members",
-      component: () => import("../views/admin/MembersManageView.vue"),
+      component: () => import("@/views/admin/MembersManageView.vue"),
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
       path: "/admin/dashboard",
       name: "admin-dashboard",
-      component: () => import("../views/admin/DashboardView.vue"),
+      component: () => import("@/views/admin/DashboardView.vue"),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    // 새로 추가되는 관리자 라우트들
+    {
+      path: "/admin/boards",
+      name: "admin-boards",
+      component: () => import("@/views/admin/BoardsManageView.vue"),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+
+    {
+      path: "/admin/logs",
+      name: "admin-logs",
+      component: () => import("@/views/admin/SystemLogsView.vue"),
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     // 기존 routes 배열에 다음 라우트들을 추가하세요:
@@ -142,17 +156,96 @@ const router = createRouter({
   },
 });
 
+// // 네비게이션 가드 강화
+// router.beforeEach(async (to, from, next) => {
+//   const authStore = useAuthStore();
+//   const isLoggedIn = authStore.isAuthenticated;
+//   const isAdmin = authStore.isAdmin;
+
+//   // 로그인이 필요한 페이지 처리
+//   if (to.meta.requiresAuth && !isLoggedIn) {
+//     next({ name: "login", query: { redirect: to.fullPath } });
+
+//     return;
+//   }
+
+//   // 관리자 권한이 필요한 페이지 처리
+//   if (to.meta.requiresAdmin) {
+//     if (!isLoggedIn) {
+//       next({ name: "login", query: { redirect: to.fullPath } });
+//       return;
+//     }
+
+//     // 사용자 정보가 로드되지 않은 경우 로드 시도
+//     if (!authStore.user) {
+//       try {
+//         await authStore.loadUser();
+//       } catch (error) {
+//         console.error("사용자 정보 로드 실패:", error);
+//         next({ name: "login" });
+//         return;
+//       }
+//     }
+
+//     if (!isAdmin) {
+//       alert("관리자 권한이 필요합니다.");
+//       next({ name: "home" });
+//       return;
+//     }
+//   }
+
+//   next();
+// });
+// // 네비게이션 가드 강화
+// router.beforeEach(async (to, from, next) => {
+//   const authStore = useAuthStore();
+//   const isLoggedIn = authStore.isAuthenticated;
+//   const isAdmin = authStore.isAdmin;
+
+//   // 로그인이 필요한 페이지 처리
+//   if (to.meta.requiresAuth && !isLoggedIn) {
+//     next({ name: "login", query: { redirect: to.fullPath } });
+//     return;
+//   }
+
+//   // 관리자 권한이 필요한 페이지 처리
+//   if (to.meta.requiresAdmin) {
+//     if (!isLoggedIn) {
+//       next({ name: "login", query: { redirect: to.fullPath } });
+//       return;
+//     }
+
+//     // 사용자 정보가 로드되지 않은 경우 로드 시도
+//     if (!authStore.user) {
+//       try {
+//         await authStore.loadUser();
+//       } catch (error) {
+//         console.error("사용자 정보 로드 실패:", error);
+//         next({ name: "login" });
+//         return;
+//       }
+//     }
+
+//     if (!isAdmin) {
+//       alert("관리자 권한이 필요합니다.");
+//       next({ name: "home" });
+//       return;
+//     }
+//   }
+
+//   next();
+// });
 // 네비게이션 가드 설정
-router.beforeEach((to, from, next) => {
-  const isLoggedIn = localStorage.getItem("auth-token") !== null;
+// router.beforeEach((to, from, next) => {
+//   const isLoggedIn = localStorage.getItem("auth-token") !== null;
 
-  // 인증이 필요한 페이지 처리
-  if (to.meta.requiresAuth && !isLoggedIn) {
-    next({ name: "login", query: { redirect: to.fullPath } });
-    return;
-  }
+//   // 인증이 필요한 페이지 처리
+//   if (to.meta.requiresAuth && !isLoggedIn) {
+//     next({ name: "login", query: { redirect: to.fullPath } });
+//     return;
+//   }
 
-  next();
-});
+//   next();
+// });
 
 export default router;
