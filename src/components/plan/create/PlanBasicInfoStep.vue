@@ -27,7 +27,7 @@
                 </div>
   
                 <!-- 기본 정보 입력 영역 -->
-                <div class="col-md-4">
+                <div class="col-md-4" style="margin-top: 30px; ">
                   <div class="travel-tips mb-4">
                     <h5><i class="fas fa-lightbulb text-warning me-2"></i>여행 계획 팁</h5>
                     <ul class="tips-list">

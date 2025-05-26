@@ -196,7 +196,7 @@
       </div>
   
       <!-- 검색 패널 -->
-      <div class="search-panel" :class="{ 'panel-open': showSearchPanel }">
+      <div class="search-panel" :class="{ 'panel-open': showSearchPanel }" style="height: 777px;">
         <div class="search-panel-header">
           <h3>여행지 검색 및 선택</h3>
           <button class="close-panel" @click="showSearchPanel = false">
@@ -2068,6 +2068,7 @@
     }
   
     .search-panel-content {
+      height: 600px;
       padding: 0;
     }
   
