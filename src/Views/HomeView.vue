@@ -76,38 +76,6 @@
       </div>
     </section>
 
-    <section class="reviews">
-      <h2 class="text-center">여행객 후기</h2>
-      <div v-if="loadingReviews" class="text-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">로딩중...</span>
-        </div>
-      </div>
-      <div v-else class="reviews-container">
-        <div v-for="review in userReviews" :key="review.bno" class="review-card">
-          <div class="review-content">"{{ truncateText(review.content, 100) }}"</div>
-          <div class="reviewer">
-            <div class="reviewer-img">
-              <img
-                :src="`https://ui-avatars.com/api/?name=${encodeURIComponent(review.writer)}&background=random`"
-                :alt="review.writer"
-              />
-            </div>
-            <div class="reviewer-info">
-              <h4>{{ review.writer }}</h4>
-              <p>{{ review.title }}</p>
-              <div class="review-meta">
-                <span class="review-date">{{ formatDate(review.regDate) }}</span>
-                <span class="review-views">👀 {{ review.viewCnt }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="review-actions">
-            <router-link :to="`/board/${review.bno}`" class="btn btn-sm btn-outline-primary"> 후기 보기 </router-link>
-          </div>
-        </div>
-      </div>
-    </section>
     <!-- HomeView.vue에 추가할 공지사항 섹션 -->
     <section class="notices-section">
       <div class="container">

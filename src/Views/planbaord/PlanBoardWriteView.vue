@@ -20,7 +20,11 @@
         <div class="col-lg-8">
           <!-- 여행 계획 선택 단계 -->
           <div v-if="!selectedPlan && !isEdit" class="plan-selection-step">
-            <PlanSelector @plan-selected="handlePlanSelected" @selection-cancelled="handleSelectionCancelled" />
+            <PlanSelector
+              :auto-select-plan-id="queryPlanId"
+              @plan-selected="handlePlanSelected"
+              @selection-cancelled="handleSelectionCancelled"
+            />
           </div>
 
           <!-- 게시글 작성 폼 -->
@@ -98,57 +102,7 @@
                       </select>
                     </div>
                   </div>
-                  <!-- 🔥 새로 추가되는 공개/비공개 설정 부분 🔥 -->
-                  <div class="row mb-4">
-                    <div class="col-12">
-                      <label class="form-label">
-                        <i class="fas fa-eye me-1"></i>
-                        공개 설정
-                      </label>
-                      <div class="public-toggle-container">
-                        <div class="form-check form-switch">
-                          <input
-                            class="form-check-input public-toggle-switch"
-                            type="checkbox"
-                            id="isPublic"
-                            v-model="form.isPublic"
-                            :class="{ 'switch-on': form.isPublic, 'switch-off': !form.isPublic }"
-                          />
-                          <label class="form-check-label public-toggle-label" for="isPublic">
-                            <div class="toggle-content">
-                              <div class="toggle-icon">
-                                <i
-                                  :class="form.isPublic ? 'fas fa-globe text-success' : 'fas fa-lock text-warning'"
-                                ></i>
-                              </div>
-                              <div class="toggle-text">
-                                <strong>{{ form.isPublic ? "공개" : "비공개" }}</strong>
-                                <small class="toggle-description">
-                                  {{
-                                    form.isPublic
-                                      ? "모든 사용자가 이 게시글을 볼 수 있습니다"
-                                      : "본인만 이 게시글을 볼 수 있습니다"
-                                  }}
-                                </small>
-                              </div>
-                            </div>
-                          </label>
-                        </div>
 
-                        <!-- 공개/비공개 상태에 따른 추가 정보 -->
-                        <div class="public-status-info">
-                          <div v-if="form.isPublic" class="alert alert-info alert-sm">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>공개 게시글:</strong> 다른 사용자들이 검색하고 댓글을 달 수 있습니다.
-                          </div>
-                          <div v-else class="alert alert-warning alert-sm">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <strong>비공개 게시글:</strong> 본인만 볼 수 있으며, 나중에 공개로 변경할 수 있습니다.
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                   <!-- 여행 상세 정보 -->
                   <div class="row mb-4">
                     <div class="col-md-8">
@@ -464,7 +418,6 @@
                   />
                   <div class="form-text">선택사항입니다</div>
                 </div>
-
                 <!-- 공개/비공개 설정 추가 -->
                 <div class="col-md-6">
                   <label class="form-label">
@@ -617,6 +570,10 @@ const selectedPlanDay = ref(1);
 let writeMap = null;
 let writeMapMarkers = [];
 
+// 쿼리 파라미터 처리를 위한 변수 추가
+const queryPlanId = ref(null);
+const fromPlanShare = ref(false);
+
 // 상태 관리
 const isEdit = computed(() => !!route.params.pboardNo);
 const selectedPlan = ref(null);
@@ -647,7 +604,7 @@ const popularTags = ref([
   "핫플레이스",
 ]);
 
-// form 데이터에 isPublic 추가
+// 폼 데이터 수정
 const form = ref({
   title: "",
   content: "",
@@ -656,12 +613,11 @@ const form = ref({
   travelDestinations: "",
   travelDuration: null,
   participantCount: null,
-  estimatedBudget: null, // 예산 필드도 추가
   planId: null,
   tagNames: "",
-  isPublic: true, // 기본값은 공개로 설정
+  isPublic: true, // 기본값을 true로 설정
+  isFeatured: false, // 추천 게시글 여부도 추가
 });
-
 // 계산된 속성
 const isFormValid = computed(() => {
   return form.value.title.trim() && form.value.content.trim();
@@ -686,8 +642,8 @@ const groupedSchedule = computed(() => {
   return grouped;
 });
 
-// 메서드
-const handlePlanSelected = async (plan) => {
+// 기존 handlePlanSelected 함수 수정 (자동 선택 시 추가 안내)
+const handlePlanSelected = (plan) => {
   selectedPlan.value = plan;
 
   // 폼에 여행 계획 정보 자동 입력
@@ -702,24 +658,19 @@ const handlePlanSelected = async (plan) => {
       form.value.travelDestinations = destinations.slice(0, 5).join(", ");
     }
 
-    // 기본 제목 제안
+    // 기본 제목 제안 (공유하기에서 온 경우 다른 제목 제안)
     if (!form.value.title) {
-      form.value.title = `${plan.title} 여행기`;
+      if (fromPlanShare.value) {
+        form.value.title = `${plan.title} - 여행 후기 공유`;
+      } else {
+        form.value.title = `${plan.title} 여행기`;
+      }
     }
 
-    // ✨ 새로 추가: 관광지 정보 로드
-    await loadPlanAttractionDetails();
-
-    // 선택된 일차가 유효한지 확인
-    if (selectedPlanDay.value > planDayCount.value) {
-      selectedPlanDay.value = 1;
+    // 공유하기에서 온 경우 기본 내용 템플릿 제공
+    if (fromPlanShare.value && !form.value.content) {
+      form.value.content = generateDefaultContent(plan);
     }
-
-    // 지도 초기화
-    setTimeout(() => {
-      initializeWriteMap();
-      updateWriteMapMarkers();
-    }, 1000);
   }
 };
 
@@ -1155,6 +1106,83 @@ const planTotalPlaces = computed(() => {
   return selectedPlan.value.details.filter((detail) => !!detail.title).length;
 });
 
+// 쿼리에서 전달받은 planId로 여행 계획 로드하는 함수 추가
+const loadPlanFromQuery = async (planId) => {
+  try {
+    loading.value = true;
+
+    // 여행 계획 상세 정보 조회
+    const response = await planAPI.getPlanDetail(planId);
+    const plan = response.data;
+
+    if (plan) {
+      // 여행 계획 선택 상태로 설정
+      handlePlanSelected(plan);
+
+      // 기본 제목과 내용 미리 설정
+      if (!form.value.title) {
+        form.value.title = `${plan.title} - 여행 후기`;
+      }
+
+      if (!form.value.content) {
+        // 기본 여행기 템플릿 제공
+        form.value.content = generateDefaultContent(plan);
+      }
+
+      // 성공 메시지
+      setTimeout(() => {
+        alert(`"${plan.title}" 여행 계획이 자동으로 선택되었습니다. 여행 경험을 공유해보세요!`);
+      }, 500);
+    } else {
+      alert("여행 계획을 찾을 수 없습니다.");
+      router.push("/planboard/write");
+    }
+  } catch (error) {
+    console.error("여행 계획 로드 중 오류:", error);
+    alert("여행 계획을 불러오는 중 오류가 발생했습니다.");
+    // 에러 시 일반 작성 모드로 전환
+    showDirectWrite.value = true;
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 기본 여행기 내용 생성 함수 (이전 코드에서 가져옴)
+const generateDefaultContent = (plan) => {
+  const destinations = plan.details
+    ? [...new Set(plan.details.map((detail) => detail.title))].slice(0, 5).join(", ")
+    : "다양한 관광지";
+
+  const duration = calculateDays(plan.startDate, plan.endDate);
+
+  return `🌟 ${plan.title} 여행 후기
+
+📅 여행 기간: ${formatDate(plan.startDate)} ~ ${formatDate(plan.endDate)} (${duration}일)
+📍 주요 방문지: ${destinations}
+
+✨ 여행 하이라이트
+• 가장 인상 깊었던 장소는?
+• 예상과 달랐던 경험이 있다면?
+
+🍽️ 추천 맛집
+• 
+• 
+
+💡 여행 팁
+• 교통편: 
+• 예산: 
+• 준비물: 
+
+📷 사진과 추억
+[여행 중 찍은 사진들을 여기에 추가해보세요]
+
+📝 전체적인 소감
+${plan.description ? plan.description : "이번 여행을 통해 느낀 점을 자유롭게 적어보세요."}
+
+---
+💬 이 여행을 계획하시는 분들께 도움이 되길 바라며, 궁금한 점이 있으시면 댓글로 남겨주세요! 😊`;
+};
+
 // ✨ 새로 추가: 선택된 일자가 변경될 때 지도 업데이트
 watch(selectedPlanDay, () => {
   setTimeout(() => {
@@ -1162,7 +1190,7 @@ watch(selectedPlanDay, () => {
   }, 100);
 });
 
-// 라이프사이클
+// onMounted 함수 수정
 onMounted(async () => {
   if (!authStore.isAuthenticated) {
     alert("로그인이 필요합니다.");
@@ -1170,11 +1198,23 @@ onMounted(async () => {
     return;
   }
 
+  // 쿼리 파라미터 확인
+  const planIdParam = route.query.planId;
+  const fromPlanParam = route.query.fromPlan;
+
+  if (planIdParam && fromPlanParam === "true") {
+    queryPlanId.value = parseInt(planIdParam);
+    fromPlanShare.value = true;
+    console.log("여행 계획에서 공유하기로 접근:", queryPlanId.value);
+  }
+
   if (isEdit.value) {
     await loadExistingPost();
-  } else {
-    loadDraft(); // 새 작성 시에만 임시저장 데이터 확인
+  } else if (!queryPlanId.value) {
+    // 쿼리 파라미터가 없는 일반적인 경우에만 임시저장 데이터 확인
+    loadDraft();
   }
+  // queryPlanId가 있는 경우는 PlanSelector가 자동으로 처리
 });
 </script>
 
@@ -2119,207 +2159,159 @@ textarea.form-control {
   color: #0dcaf0;
 }
 
-/* 🔥 공개/비공개 토글 스타일 🔥 */
+/* 공개/비공개 토글 스타일 */
 .public-toggle-container {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border: 1px solid #dee2e6;
-  border-radius: 12px;
-  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+
+  gap: 0.75rem;
+}
+
+.public-toggle-wrapper {
   position: relative;
-  overflow: hidden;
+  display: inline-block;
 }
 
-.public-toggle-container::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #28a745, #17a2b8, #28a745);
-  animation: shimmer 2s infinite;
-}
-
-.form-check.form-switch {
-  margin-bottom: 1rem;
-}
-
-.public-toggle-switch {
-  width: 3rem;
-  height: 1.5rem;
-  background-color: #dc3545;
-  border: 2px solid #dc3545;
-  border-radius: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
-}
-
-.public-toggle-switch:checked {
-  background-color: #28a745;
-  border-color: #28a745;
-  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
-}
-
-.public-toggle-switch:focus {
-  box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25);
-}
-
-.public-toggle-switch.switch-on {
-  background-color: #28a745;
-  border-color: #28a745;
-}
-
-.public-toggle-switch.switch-off {
-  background-color: #ffc107;
-  border-color: #ffc107;
+.public-toggle-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
 }
 
 .public-toggle-label {
+  display: flex;
+  align-items: center;
   cursor: pointer;
-  margin-left: 1rem;
-  flex: 1;
+  position: relative;
+  background: #f8f9fa;
+  border: 2px solid #dee2e6;
+  border-radius: 25px;
+  padding: 0.5rem 1rem;
+  transition: all 0.3s ease;
+  width: 140px;
+  height: 45px;
+  overflow: hidden;
   user-select: none;
 }
 
-.toggle-content {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  background: white;
-  border-radius: 10px;
-  border: 1px solid #e9ecef;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.toggle-content:hover {
-  background: #f8f9fa;
-  border-color: #dee2e6;
+.public-toggle-label:hover {
+  border-color: #adb5bd;
   transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.toggle-icon {
-  width: 40px;
-  height: 40px;
+.public-toggle-slider {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 60px;
+  height: 35px;
+  background: linear-gradient(135deg, #dc3545 0%, #e74c3c 100%);
+  border-radius: 20px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border: 2px solid #dee2e6;
+}
+
+.public-toggle-slider::before {
+  content: "🔒";
+  font-size: 14px;
+  color: white;
   transition: all 0.3s ease;
 }
 
-.toggle-icon i {
-  font-size: 1.2rem;
-  transition: all 0.3s ease;
+.public-toggle-input:checked + .public-toggle-label {
+  background: #e8f5e9;
+  border-color: #28a745;
 }
 
-.toggle-text {
-  flex: 1;
+.public-toggle-input:checked + .public-toggle-label .public-toggle-slider {
+  transform: translateX(75px);
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.public-toggle-input:checked + .public-toggle-label .public-toggle-slider::before {
+  content: "🌍";
+}
+
+.public-toggle-text {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.toggle-text strong {
-  color: #495057;
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-
-.toggle-description {
-  color: #6c757d;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0 10px;
   font-size: 0.85rem;
-  line-height: 1.4;
-  margin-top: 0.25rem;
+  font-weight: 600;
+  z-index: 1;
+  position: relative;
 }
 
-.public-status-info {
-  margin-top: 1rem;
+.public-text {
+  color: #28a745;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
-.alert-sm {
-  padding: 0.75rem 1rem;
-  font-size: 0.9rem;
-  border-radius: 8px;
-  border: none;
-  margin-bottom: 0;
+.private-text {
+  color: #dc3545;
+  opacity: 1;
+  transition: opacity 0.3s ease;
 }
 
-.alert-info {
-  background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
-  color: #0c5460;
-  border-left: 4px solid #17a2b8;
+.public-toggle-input:checked + .public-toggle-label .public-text {
+  opacity: 1;
 }
 
-.alert-warning {
-  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-  color: #856404;
-  border-left: 4px solid #ffc107;
+.public-toggle-input:checked + .public-toggle-label .private-text {
+  opacity: 0;
 }
 
-/* 애니메이션 효과 */
-@keyframes toggleBounce {
-  0%,
-  20%,
-  60%,
-  100% {
-    transform: translateY(0);
+.public-toggle-description {
+  min-height: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.public-description,
+.private-description {
+  display: flex;
+  align-items: center;
+  animation: fadeInScale 0.3s ease;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
   }
-  40% {
-    transform: translateY(-3px);
-  }
-  80% {
-    transform: translateY(-1px);
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
-.public-toggle-switch:checked + .public-toggle-label .toggle-content {
-  animation: toggleBounce 0.6s ease-out;
-}
-
-/* 반응형 디자인 */
+/* 반응형 */
 @media (max-width: 768px) {
-  .toggle-content {
-    flex-direction: column;
-    text-align: center;
-    gap: 0.75rem;
-    padding: 1rem;
+  .public-toggle-label {
+    width: 120px;
+    height: 40px;
+    padding: 0.4rem 0.8rem;
   }
 
-  .toggle-text {
-    text-align: center;
+  .public-toggle-slider {
+    width: 50px;
+    height: 30px;
   }
 
-  .public-toggle-container {
-    padding: 1rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .public-toggle-switch {
-    width: 2.5rem;
-    height: 1.2rem;
+  .public-toggle-input:checked + .public-toggle-label .public-toggle-slider {
+    transform: translateX(65px);
   }
 
-  .toggle-icon {
-    width: 35px;
-    height: 35px;
-  }
-
-  .toggle-icon i {
-    font-size: 1rem;
-  }
-
-  .toggle-text strong {
-    font-size: 1rem;
-  }
-
-  .toggle-description {
+  .public-toggle-text {
     font-size: 0.8rem;
   }
 }

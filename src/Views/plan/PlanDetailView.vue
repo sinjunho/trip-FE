@@ -1,4 +1,4 @@
-<!-- src/views/PlanDetailView.vue -->
+<!-- src/views/plan/PlanDetailView.vue - 공유 버튼 추가 수정 -->
 <template>
   <div class="plan-detail-view">
     <div class="container py-4">
@@ -19,15 +19,28 @@
                 <p class="mb-0">{{ plan.description }}</p>
               </div>
               <div class="action-buttons">
+                <!-- 수정 버튼 -->
                 <router-link :to="`/plans/${planId}/edit`" class="btn btn-outline-primary me-2">
                   <i class="fas fa-edit"></i> 수정
                 </router-link>
+
+                <!-- 공유 버튼 추가 -->
+                <button class="btn btn-success me-2" @click="shareToBoard" :disabled="isSharing">
+                  <span v-if="isSharing">
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                    공유 중...
+                  </span>
+                  <span v-else> <i class="fas fa-share-alt me-1"></i>공유하기 </span>
+                </button>
+
+                <!-- 삭제 버튼 -->
                 <button class="btn btn-outline-danger" @click="confirmDelete"><i class="fas fa-trash"></i> 삭제</button>
               </div>
             </div>
           </div>
         </div>
 
+        <!-- 나머지 기존 컴포넌트 내용은 그대로 유지 -->
         <!-- 여행 일정 개요 섹션 -->
         <div class="row mb-4">
           <div class="col-md-8">
@@ -236,6 +249,7 @@ const authStore = useAuthStore();
 
 const planId = parseInt(route.params.id);
 const loading = ref(true);
+const isSharing = ref(false); // 공유 버튼 로딩 상태 추가
 const plan = ref({
   title: "",
   description: "",
@@ -252,6 +266,40 @@ let markers = [];
 if (!authStore.isAuthenticated) {
   router.push(`/login?redirect=/plans/${planId}`);
 }
+
+// 공유하기 함수 추가
+const shareToBoard = async () => {
+  try {
+    isSharing.value = true;
+
+    // 여행 계획이 제대로 로드되었는지 확인
+    if (!plan.value || !plan.value.title) {
+      alert("여행 계획 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+
+    // 확인 대화상자
+    const confirmShare = confirm(`"${plan.value.title}" 여행 계획을 다른 사용자들과 공유하시겠습니까?`);
+
+    if (!confirmShare) {
+      return;
+    }
+
+    // 여행 계획 ID와 함께 공유 페이지로 이동
+    router.push({
+      path: "/planboard/write",
+      query: {
+        planId: planId,
+        fromPlan: "true",
+      },
+    });
+  } catch (error) {
+    console.error("공유 페이지 이동 중 오류:", error);
+    alert("공유 페이지로 이동하는 중 오류가 발생했습니다.");
+  } finally {
+    isSharing.value = false;
+  }
+};
 
 // 일수 계산
 const dayCount = computed(() => {
@@ -667,5 +715,44 @@ onMounted(async () => {
 .checklist .form-check-label {
   cursor: pointer;
   transition: all 0.2s;
+}
+
+/* 공유 버튼 스타일 추가 */
+.btn-success {
+  background-color: #28a745;
+  border-color: #28a745;
+  transition: all 0.3s ease;
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: #218838;
+  border-color: #1e7e34;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.btn-success:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .action-buttons {
+    width: 100%;
+    justify-content: center;
+    margin-top: 1rem;
+  }
+
+  .action-buttons .btn {
+    flex: 1;
+    min-width: 100px;
+  }
 }
 </style>
