@@ -98,7 +98,57 @@
                       </select>
                     </div>
                   </div>
+                  <!-- 🔥 새로 추가되는 공개/비공개 설정 부분 🔥 -->
+                  <div class="row mb-4">
+                    <div class="col-12">
+                      <label class="form-label">
+                        <i class="fas fa-eye me-1"></i>
+                        공개 설정
+                      </label>
+                      <div class="public-toggle-container">
+                        <div class="form-check form-switch">
+                          <input
+                            class="form-check-input public-toggle-switch"
+                            type="checkbox"
+                            id="isPublic"
+                            v-model="form.isPublic"
+                            :class="{ 'switch-on': form.isPublic, 'switch-off': !form.isPublic }"
+                          />
+                          <label class="form-check-label public-toggle-label" for="isPublic">
+                            <div class="toggle-content">
+                              <div class="toggle-icon">
+                                <i
+                                  :class="form.isPublic ? 'fas fa-globe text-success' : 'fas fa-lock text-warning'"
+                                ></i>
+                              </div>
+                              <div class="toggle-text">
+                                <strong>{{ form.isPublic ? "공개" : "비공개" }}</strong>
+                                <small class="toggle-description">
+                                  {{
+                                    form.isPublic
+                                      ? "모든 사용자가 이 게시글을 볼 수 있습니다"
+                                      : "본인만 이 게시글을 볼 수 있습니다"
+                                  }}
+                                </small>
+                              </div>
+                            </div>
+                          </label>
+                        </div>
 
+                        <!-- 공개/비공개 상태에 따른 추가 정보 -->
+                        <div class="public-status-info">
+                          <div v-if="form.isPublic" class="alert alert-info alert-sm">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>공개 게시글:</strong> 다른 사용자들이 검색하고 댓글을 달 수 있습니다.
+                          </div>
+                          <div v-else class="alert alert-warning alert-sm">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>비공개 게시글:</strong> 본인만 볼 수 있으며, 나중에 공개로 변경할 수 있습니다.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                   <!-- 여행 상세 정보 -->
                   <div class="row mb-4">
                     <div class="col-md-8">
@@ -389,7 +439,7 @@ const popularTags = ref([
   "핫플레이스",
 ]);
 
-// 폼 데이터
+// 기존 form ref에 isPublic 속성 추가
 const form = ref({
   title: "",
   content: "",
@@ -400,6 +450,7 @@ const form = ref({
   participantCount: null,
   planId: null,
   tagNames: "",
+  isPublic: true, // 🔥 새로 추가: 기본값은 공개(true = 1)
 });
 
 // 계산된 속성
@@ -476,16 +527,6 @@ const changePlan = () => {
 
 const startDirectWrite = () => {
   showDirectWrite.value = true;
-};
-
-const addTag = (tagName) => {
-  if (!tagName || !tagName.trim()) return;
-
-  const trimmedTag = tagName.trim();
-  if (!tagList.value.find((tag) => tag.tagName === trimmedTag)) {
-    tagList.value.push({ tagName: trimmedTag, useCount: 1 });
-    updateTagNames();
-  }
 };
 
 const removeTag = (tag) => {
@@ -588,6 +629,7 @@ const loadDraft = () => {
   }
 };
 
+// handleSubmit 함수에서 DB 저장 시 변환
 const handleSubmit = async () => {
   if (!isFormValid.value) {
     alert("제목과 내용을 모두 입력해주세요.");
@@ -600,6 +642,7 @@ const handleSubmit = async () => {
     const submitData = {
       ...form.value,
       tagNames: form.value.tagNames || "",
+      isPublic: form.value.isPublic ? 1 : 0, // 🔥 boolean을 숫자로 변환 (DB 저장용)
     };
 
     if (isEdit.value) {
@@ -628,6 +671,7 @@ const handleCancel = () => {
   }
 };
 
+// loadExistingPost 함수에서 DB 데이터 로드 시 변환
 const loadExistingPost = async () => {
   if (isEdit.value) {
     try {
@@ -645,6 +689,7 @@ const loadExistingPost = async () => {
         participantCount: post.participantCount || null,
         planId: post.planId || null,
         tagNames: post.tagNames || "",
+        isPublic: post.isPublic === 1, // 🔥 숫자를 boolean으로 변환 (DB에서 읽을 때)
       };
 
       // 태그 리스트 설정
@@ -1619,5 +1664,210 @@ textarea.form-control {
 
 .form-text.text-info i {
   color: #0dcaf0;
+}
+
+/* 🔥 공개/비공개 토글 스타일 🔥 */
+.public-toggle-container {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.public-toggle-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #28a745, #17a2b8, #28a745);
+  animation: shimmer 2s infinite;
+}
+
+.form-check.form-switch {
+  margin-bottom: 1rem;
+}
+
+.public-toggle-switch {
+  width: 3rem;
+  height: 1.5rem;
+  background-color: #dc3545;
+  border: 2px solid #dc3545;
+  border-radius: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.public-toggle-switch:checked {
+  background-color: #28a745;
+  border-color: #28a745;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.public-toggle-switch:focus {
+  box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25);
+}
+
+.public-toggle-switch.switch-on {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.public-toggle-switch.switch-off {
+  background-color: #ffc107;
+  border-color: #ffc107;
+}
+
+.public-toggle-label {
+  cursor: pointer;
+  margin-left: 1rem;
+  flex: 1;
+  user-select: none;
+}
+
+.toggle-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e9ecef;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.toggle-content:hover {
+  background: #f8f9fa;
+  border-color: #dee2e6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 2px solid #dee2e6;
+  transition: all 0.3s ease;
+}
+
+.toggle-icon i {
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+}
+
+.toggle-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.toggle-text strong {
+  color: #495057;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.toggle-description {
+  color: #6c757d;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin-top: 0.25rem;
+}
+
+.public-status-info {
+  margin-top: 1rem;
+}
+
+.alert-sm {
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  border: none;
+  margin-bottom: 0;
+}
+
+.alert-info {
+  background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+  color: #0c5460;
+  border-left: 4px solid #17a2b8;
+}
+
+.alert-warning {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  color: #856404;
+  border-left: 4px solid #ffc107;
+}
+
+/* 애니메이션 효과 */
+@keyframes toggleBounce {
+  0%,
+  20%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-3px);
+  }
+  80% {
+    transform: translateY(-1px);
+  }
+}
+
+.public-toggle-switch:checked + .public-toggle-label .toggle-content {
+  animation: toggleBounce 0.6s ease-out;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .toggle-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+    padding: 1rem;
+  }
+
+  .toggle-text {
+    text-align: center;
+  }
+
+  .public-toggle-container {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .public-toggle-switch {
+    width: 2.5rem;
+    height: 1.2rem;
+  }
+
+  .toggle-icon {
+    width: 35px;
+    height: 35px;
+  }
+
+  .toggle-icon i {
+    font-size: 1rem;
+  }
+
+  .toggle-text strong {
+    font-size: 1rem;
+  }
+
+  .toggle-description {
+    font-size: 0.8rem;
+  }
 }
 </style>

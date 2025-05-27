@@ -168,43 +168,6 @@
       </div>
     </div>
   </div>
-
-  <!-- 디버그 정보 (개발용) -->
-  <div v-if="true" class="debug-info card mb-4">
-    <div class="card-header">
-      <h6>디버그 정보 (개발용)</h6>
-    </div>
-    <div class="card-body">
-      <div class="row">
-        <div class="col-md-6">
-          <h6>상태 정보:</h6>
-          <ul class="list-unstyled">
-            <li>로딩 상태: {{ loading }}</li>
-            <li>게시글 수: {{ posts.length }}</li>
-            <li>총 아이템: {{ totalItems }}</li>
-            <li>현재 페이지: {{ currentPage }}</li>
-            <li>총 페이지: {{ totalPages }}</li>
-            <li>로그인 상태: {{ authStore.isAuthenticated }}</li>
-          </ul>
-        </div>
-        <div class="col-md-6">
-          <h6>필터 정보:</h6>
-          <pre>{{ JSON.stringify(filters, null, 2) }}</pre>
-        </div>
-      </div>
-
-      <div class="mt-3">
-        <button class="btn btn-sm btn-info me-2" @click="testDirectAPI">직접 API 테스트</button>
-        <button class="btn btn-sm btn-warning me-2" @click="loadTestData">테스트 데이터 로드</button>
-        <button class="btn btn-sm btn-success" @click="forceReload">강제 새로고침</button>
-      </div>
-
-      <div v-if="posts.length > 0" class="mt-3">
-        <h6>첫 번째 게시글 데이터:</h6>
-        <pre>{{ JSON.stringify(posts[0], null, 2) }}</pre>
-      </div>
-    </div>
-  </div>
 </template>
 
 <script setup>
@@ -233,6 +196,7 @@ const viewMode = ref("grid");
 const sortBy = ref("latest");
 
 // 필터 상태
+// filters 객체에 onlyMyPosts 필드 추가
 const filters = ref({
   keyword: "",
   travelTheme: "",
@@ -243,6 +207,7 @@ const filters = ref({
   budgetMax: null,
   participantCount: null,
   tagName: "",
+  onlyMyPosts: false, // 추가
 });
 
 // 계산된 속성
@@ -319,102 +284,7 @@ const loadPosts = async () => {
     loading.value = false;
   }
 };
-const testDirectAPI = async () => {
-  try {
-    console.log("직접 API 테스트 시작");
 
-    // axios를 직접 사용하여 테스트
-    const response = await fetch("/api/planboards", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("auth-token") || ""}`,
-      },
-    });
-
-    console.log("Fetch 응답 상태:", response.status);
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log("Fetch 응답 데이터:", data);
-      alert("API 직접 호출 성공! 콘솔을 확인하세요.");
-    } else {
-      console.error("Fetch 응답 에러:", response.statusText);
-      alert(`API 호출 실패: ${response.status} ${response.statusText}`);
-    }
-  } catch (error) {
-    console.error("Fetch 에러:", error);
-    alert("네트워크 오류: " + error.message);
-  }
-};
-
-const loadTestData = () => {
-  // 테스트용 더미 데이터
-  posts.value = [
-    {
-      pboardNo: 1,
-      title: "테스트 게시글 1",
-      content: "테스트 내용입니다.",
-      writer: "테스트사용자",
-      regDate: new Date().toISOString(),
-      viewCnt: 10,
-      likeCount: 5,
-      commentCount: 2,
-      travelTitle: "테스트 여행",
-      travelTheme: "힐링",
-      travelDestinations: "제주도",
-      travelDuration: 3,
-      participantCount: 2,
-      isLiked: false,
-      isFeatured: true,
-    },
-    {
-      pboardNo: 2,
-      title: "테스트 게시글 2",
-      content: "두 번째 테스트 내용입니다.",
-      writer: "테스트사용자2",
-      regDate: new Date().toISOString(),
-      viewCnt: 15,
-      likeCount: 8,
-      commentCount: 3,
-      travelTitle: "부산 여행",
-      travelTheme: "맛집",
-      travelDestinations: "부산",
-      travelDuration: 2,
-      participantCount: 4,
-      isLiked: false,
-      isFeatured: false,
-    },
-  ];
-
-  totalItems.value = 2;
-  totalPages.value = 1;
-  currentPage.value = 1;
-  loading.value = false;
-
-  console.log("테스트 데이터 로드됨:", posts.value);
-  alert("테스트 데이터가 로드되었습니다!");
-};
-
-const forceReload = () => {
-  console.log("강제 새로고침 시작");
-  posts.value = [];
-  loading.value = true;
-  setTimeout(() => {
-    loadPosts();
-  }, 100);
-};
-
-// 브라우저 콘솔에서 사용할 수 있도록 window에 추가
-if (typeof window !== "undefined") {
-  window.debugPlanBoard = {
-    testAPI: testDirectAPI,
-    loadTest: loadTestData,
-    reload: forceReload,
-    getPosts: () => posts.value,
-    getFilters: () => filters.value,
-  };
-}
 const loadFeaturedPosts = async () => {
   try {
     console.log("loadFeaturedPosts 시작");
@@ -452,6 +322,7 @@ const searchPosts = (searchData) => {
   loadPosts();
 };
 
+// resetFilters 함수에도 추가
 const resetFilters = () => {
   filters.value = {
     keyword: "",
@@ -463,6 +334,7 @@ const resetFilters = () => {
     budgetMax: null,
     participantCount: null,
     tagName: "",
+    onlyMyPosts: false, // 추가
   };
   currentPage.value = 1;
   sortBy.value = "latest";

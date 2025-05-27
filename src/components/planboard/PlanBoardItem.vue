@@ -21,6 +21,11 @@
         <div v-if="post.isFeatured" class="featured-badge">
           <i class="fas fa-star"></i>
         </div>
+        <!-- 비공개 배지 -->
+        <div v-if="!post.isPublic" class="private-badge">
+          <i class="fas fa-lock"></i>
+          비공개
+        </div>
       </div>
 
       <div class="post-content">
@@ -599,5 +604,20 @@ const formatDate = (dateStr) => {
     align-self: stretch;
     justify-content: space-around;
   }
+}
+.private-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(108, 117, 125, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 15px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 3px;
 }
 </style>
