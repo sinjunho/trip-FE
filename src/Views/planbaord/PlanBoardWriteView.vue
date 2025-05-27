@@ -294,6 +294,55 @@
                   </div>
                 </div>
               </div>
+
+              <!-- 기존 여행 상세 정보 다음에 추가 -->
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <label for="estimatedBudget" class="form-label">
+                    <i class="fas fa-won-sign me-1"></i>
+                    예상 예산 (원)
+                  </label>
+                  <input
+                    type="number"
+                    id="estimatedBudget"
+                    v-model.number="form.estimatedBudget"
+                    class="form-control"
+                    placeholder="예: 500000"
+                    min="0"
+                  />
+                  <div class="form-text">선택사항입니다</div>
+                </div>
+
+                <!-- 공개/비공개 설정 추가 -->
+                <div class="col-md-6">
+                  <label class="form-label">
+                    <i class="fas fa-eye me-1"></i>
+                    게시글 공개 설정
+                  </label>
+                  <div class="public-toggle-container">
+                    <div class="public-toggle-wrapper">
+                      <input type="checkbox" id="isPublic" v-model="form.isPublic" class="public-toggle-input" />
+                      <label for="isPublic" class="public-toggle-label">
+                        <span class="public-toggle-slider"></span>
+                        <span class="public-toggle-text">
+                          <span class="public-text">공개</span>
+                          <span class="private-text">비공개</span>
+                        </span>
+                      </label>
+                    </div>
+                    <div class="public-toggle-description">
+                      <div v-if="form.isPublic" class="public-description">
+                        <i class="fas fa-globe-asia text-success me-1"></i>
+                        <small class="text-success fw-bold">모든 사용자가 볼 수 있습니다</small>
+                      </div>
+                      <div v-else class="private-description">
+                        <i class="fas fa-lock text-warning me-1"></i>
+                        <small class="text-warning fw-bold">본인만 볼 수 있습니다</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </form>
             <div class="card">
               <div class="card-header bg-light">
@@ -439,7 +488,7 @@ const popularTags = ref([
   "핫플레이스",
 ]);
 
-// 기존 form ref에 isPublic 속성 추가
+// form 데이터에 isPublic 추가
 const form = ref({
   title: "",
   content: "",
@@ -448,9 +497,10 @@ const form = ref({
   travelDestinations: "",
   travelDuration: null,
   participantCount: null,
+  estimatedBudget: null, // 예산 필드도 추가
   planId: null,
   tagNames: "",
-  isPublic: true, // 🔥 새로 추가: 기본값은 공개(true = 1)
+  isPublic: true, // 기본값은 공개로 설정
 });
 
 // 계산된 속성
@@ -671,14 +721,13 @@ const handleCancel = () => {
   }
 };
 
-// loadExistingPost 함수에서 DB 데이터 로드 시 변환
+// loadExistingPost 함수에서 기존 데이터 로드시 isPublic도 포함
 const loadExistingPost = async () => {
   if (isEdit.value) {
     try {
       const response = await planboardAPI.getPlanBoardDetail(route.params.pboardNo);
       const post = response.data;
 
-      // 폼에 기존 데이터 로드
       form.value = {
         title: post.title || "",
         content: post.content || "",
@@ -687,9 +736,10 @@ const loadExistingPost = async () => {
         travelDestinations: post.travelDestinations || "",
         travelDuration: post.travelDuration || null,
         participantCount: post.participantCount || null,
+        estimatedBudget: post.estimatedBudget || null,
         planId: post.planId || null,
         tagNames: post.tagNames || "",
-        isPublic: post.isPublic === 1, // 🔥 숫자를 boolean으로 변환 (DB에서 읽을 때)
+        isPublic: post.isPublic !== undefined ? post.isPublic : true, // 기존 데이터의 공개 설정 로드
       };
 
       // 태그 리스트 설정
@@ -700,7 +750,7 @@ const loadExistingPost = async () => {
         }));
       }
 
-      showDirectWrite.value = true; // 수정 모드에서는 바로 폼 표시
+      showDirectWrite.value = true;
     } catch (error) {
       console.error("게시글 로드 오류:", error);
       alert("게시글을 불러오는데 실패했습니다.");
